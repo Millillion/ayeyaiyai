@@ -9,11 +9,8 @@ use super::{
         BindingRestrictions, validate_escaped_identifier_text,
         validate_pattern_syntax_with_restrictions,
     },
-    expressions::validate_expression_syntax,
-    statements::{
-        validate_class_control_flow, validate_statement_syntax,
-        validate_statement_syntax_with_restrictions,
-    },
+    expressions::validate_expression_syntax_with_restrictions,
+    statements::{validate_class_control_flow, validate_statement_syntax_with_restrictions},
 };
 use std::collections::{HashMap, HashSet};
 
@@ -657,10 +654,19 @@ pub(crate) fn validate_function_syntax(
     function: &Function,
     file: &swc_common::SourceFile,
 ) -> Result<()> {
+    validate_function_syntax_with_restrictions(function, file, BindingRestrictions::default())
+}
+
+pub(crate) fn validate_function_syntax_with_restrictions(
+    function: &Function,
+    file: &swc_common::SourceFile,
+    inherited_restrictions: BindingRestrictions,
+) -> Result<()> {
     validate_function_syntax_with_explicit_strictness(
         function,
         file,
         function_has_use_strict_directive(function),
+        inherited_restrictions,
     )
 }
 
@@ -668,9 +674,11 @@ fn validate_function_syntax_with_explicit_strictness(
     function: &Function,
     file: &swc_common::SourceFile,
     strict: bool,
+    inherited_restrictions: BindingRestrictions,
 ) -> Result<()> {
     let restrictions = BindingRestrictions {
         await_reserved: function.is_async,
+        module_await_reserved: inherited_restrictions.module_await_reserved,
         yield_reserved: function.is_generator,
         await_expression_forbidden: false,
     };
@@ -779,6 +787,14 @@ pub(super) fn ensure_parameter_names_are_valid<'a>(
 }
 
 pub(crate) fn validate_class_syntax(class: &Class, file: &swc_common::SourceFile) -> Result<()> {
+    validate_class_syntax_with_restrictions(class, file, BindingRestrictions::default())
+}
+
+pub(crate) fn validate_class_syntax_with_restrictions(
+    class: &Class,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
     let private_name_declarations = collect_class_private_name_declarations(class, file)?;
     let class_private_names = private_name_declarations
         .keys()
@@ -786,14 +802,14 @@ pub(crate) fn validate_class_syntax(class: &Class, file: &swc_common::SourceFile
         .collect::<HashSet<_>>();
 
     if let Some(super_class) = &class.super_class {
-        validate_expression_syntax(super_class, file)?;
+        validate_expression_syntax_with_restrictions(super_class, file, restrictions)?;
         validate_no_forbidden_private_names_in_expression(super_class, &class_private_names)?;
     }
 
     for member in &class.body {
         match member {
             ClassMember::Constructor(constructor) => {
-                validate_constructor_syntax(constructor, file, true)?;
+                validate_constructor_syntax(constructor, file, true, restrictions)?;
             }
             ClassMember::Method(method) => {
                 if let Some(property_name) = static_prop_name(&method.key) {
@@ -802,8 +818,13 @@ pub(crate) fn validate_class_syntax(class: &Class, file: &swc_common::SourceFile
                         "static class method name `prototype` is not allowed"
                     );
                 }
-                validate_property_name_syntax(&method.key, file)?;
-                validate_function_syntax_with_explicit_strictness(&method.function, file, true)?;
+                validate_property_name_syntax_with_restrictions(&method.key, file, restrictions)?;
+                validate_function_syntax_with_explicit_strictness(
+                    &method.function,
+                    file,
+                    true,
+                    restrictions,
+                )?;
             }
             ClassMember::ClassProp(property) => {
                 if let Some(property_name) = static_prop_name(&property.key) {
@@ -817,17 +838,22 @@ pub(crate) fn validate_class_syntax(class: &Class, file: &swc_common::SourceFile
                         "static class field name `{property_name}` is not allowed"
                     );
                 }
-                validate_property_name_syntax(&property.key, file)?;
+                validate_property_name_syntax_with_restrictions(&property.key, file, restrictions)?;
                 if let Some(value) = &property.value {
-                    validate_expression_syntax(value, file)?;
+                    validate_expression_syntax_with_restrictions(value, file, restrictions)?;
                 }
             }
             ClassMember::PrivateMethod(method) => {
-                validate_function_syntax_with_explicit_strictness(&method.function, file, true)?;
+                validate_function_syntax_with_explicit_strictness(
+                    &method.function,
+                    file,
+                    true,
+                    restrictions,
+                )?;
             }
             ClassMember::PrivateProp(property) => {
                 if let Some(value) = &property.value {
-                    validate_expression_syntax(value, file)?;
+                    validate_expression_syntax_with_restrictions(value, file, restrictions)?;
                 }
             }
             ClassMember::AutoAccessor(accessor) => {
@@ -844,18 +870,23 @@ pub(crate) fn validate_class_syntax(class: &Class, file: &swc_common::SourceFile
                                 "static class accessor field name `{property_name}` is not allowed"
                             );
                         }
-                        validate_property_name_syntax(property_key, file)?;
+                        validate_property_name_syntax_with_restrictions(
+                            property_key,
+                            file,
+                            restrictions,
+                        )?;
                     }
                     Key::Private(_) => {}
                 }
                 if let Some(value) = &accessor.value {
-                    validate_expression_syntax(value, file)?;
+                    validate_expression_syntax_with_restrictions(value, file, restrictions)?;
                 }
             }
             ClassMember::StaticBlock(block) => {
                 validate_block_statement_early_errors(&block.body.stmts)?;
                 let restrictions = BindingRestrictions {
                     await_reserved: true,
+                    module_await_reserved: restrictions.module_await_reserved,
                     yield_reserved: false,
                     await_expression_forbidden: true,
                 };
@@ -874,6 +905,7 @@ fn validate_constructor_syntax(
     constructor: &Constructor,
     file: &swc_common::SourceFile,
     strict: bool,
+    restrictions: BindingRestrictions,
 ) -> Result<()> {
     ensure_parameter_names_are_valid(
         constructor.params.iter().filter_map(|parameter| match parameter {
@@ -888,17 +920,15 @@ fn validate_constructor_syntax(
     )?;
     for parameter in &constructor.params {
         match parameter {
-            ParamOrTsParamProp::Param(parameter) => validate_pattern_syntax_with_restrictions(
-                &parameter.pat,
-                file,
-                BindingRestrictions::default(),
-            )?,
+            ParamOrTsParamProp::Param(parameter) => {
+                validate_pattern_syntax_with_restrictions(&parameter.pat, file, restrictions)?
+            }
             ParamOrTsParamProp::TsParamProp(_) => {}
         }
     }
     if let Some(body) = &constructor.body {
         for statement in &body.stmts {
-            validate_statement_syntax(statement, file)?;
+            validate_statement_syntax_with_restrictions(statement, file, restrictions)?;
         }
     }
 
@@ -918,6 +948,14 @@ pub(super) fn validate_property_name_syntax(
     name: &PropName,
     file: &swc_common::SourceFile,
 ) -> Result<()> {
+    validate_property_name_syntax_with_restrictions(name, file, BindingRestrictions::default())
+}
+
+pub(super) fn validate_property_name_syntax_with_restrictions(
+    name: &PropName,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
     match name {
         PropName::Ident(identifier) => {
             let raw = source_slice_for_span(file, identifier.span)?;
@@ -926,7 +964,7 @@ pub(super) fn validate_property_name_syntax(
             }
         }
         PropName::Computed(computed) => {
-            validate_expression_syntax(&computed.expr, file)?;
+            validate_expression_syntax_with_restrictions(&computed.expr, file, restrictions)?;
         }
         _ => {}
     }

@@ -3,6 +3,44 @@ use super::*;
 const IDENTIFIER_FUNCTION_VALUE_CAPTURE_PROPERTY: &str = "__ayy[[FunctionValueCaptureSlots]]";
 
 impl<'a> FunctionCompiler<'a> {
+    fn function_prototype_method_capture_slots_are_known_absent(
+        &self,
+        object: &Expression,
+        materialized_property: &Expression,
+    ) -> bool {
+        let Expression::String(property_name) = materialized_property else {
+            return false;
+        };
+        if !matches!(property_name.as_str(), "call" | "apply" | "bind") {
+            return false;
+        }
+        let object_is_function = match object {
+            Expression::Identifier(name) => {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(name)
+                    .is_some()
+                    || self.backend.global_function_binding(name).is_some()
+                    || self.user_function(name).is_some()
+            }
+            Expression::Member { object, property } => {
+                matches!(object.as_ref(), Expression::Identifier(name) if name == "Function")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+            }
+            _ => false,
+        };
+        if !object_is_function {
+            return false;
+        }
+        let prototype_key = MemberFunctionBindingKey {
+            target: MemberFunctionBindingTarget::Prototype("Function".to_string()),
+            property: MemberFunctionBindingProperty::String(property_name.clone()),
+        };
+        self.member_function_capture_slots_entry(&prototype_key)
+            .is_none()
+    }
+
     pub(in crate::backend::direct_wasm) fn identifier_function_value_capture_slots_key(
         name: &str,
     ) -> MemberFunctionBindingKey {
@@ -386,8 +424,9 @@ impl<'a> FunctionCompiler<'a> {
         ) {
             return None;
         }
-        if let Some(live_value) =
-            self.resolve_module_namespace_live_binding_member_value(object, &materialized_property)
+        if self.expression_may_resolve_to_module_namespace_object(object)
+            && let Some(live_value) = self
+                .resolve_module_namespace_live_binding_member_value(object, &materialized_property)
         {
             let binding = self
                 .resolve_function_binding_from_expression(&live_value)
@@ -750,6 +789,40 @@ impl<'a> FunctionCompiler<'a> {
         object: &Expression,
         property: &Expression,
     ) -> Option<BTreeMap<String, String>> {
+        use crate::backend::direct_wasm::memo;
+        let current_function_name = self.current_function_name();
+        let key = if memo::memo_context_is_cacheable() {
+            memo::member_capture_slots_cache_key(object, property, current_function_name)
+        } else {
+            None
+        };
+        let Some(key) = key else {
+            return self.resolve_member_function_capture_slots_uncached(object, property);
+        };
+        if let Some(cached) = memo::lookup_member_capture_slots(key) {
+            if memo::memo_verify_enabled() {
+                let verify_token = memo::MemoStoreToken::capture();
+                let fresh = self.resolve_member_function_capture_slots_uncached(object, property);
+                assert!(
+                    !verify_token.is_clean() || fresh == cached,
+                    "AYY_MEMO_VERIFY divergence: member capture slots for {object:?}.{property:?} (function {current_function_name:?}): cached={cached:?} fresh={fresh:?}"
+                );
+            }
+            return cached;
+        }
+        let token = memo::MemoStoreToken::capture();
+        let result = self.resolve_member_function_capture_slots_uncached(object, property);
+        if token.is_clean() {
+            memo::store_member_capture_slots(key, result.clone());
+        }
+        result
+    }
+
+    fn resolve_member_function_capture_slots_uncached(
+        &self,
+        object: &Expression,
+        property: &Expression,
+    ) -> Option<BTreeMap<String, String>> {
         let trace_capture_bindings = crate::ayy_env_flag!("AYY_TRACE_CAPTURE_BINDINGS");
         if let Some(source_expression) = self.identifier_iterator_binding_source_expression(object)
             && let Some(capture_slots) =
@@ -765,8 +838,9 @@ impl<'a> FunctionCompiler<'a> {
             return Some(capture_slots);
         }
         let materialized_property = self.materialize_static_expression(property);
-        if let Some(live_value) =
-            self.resolve_module_namespace_live_binding_member_value(object, &materialized_property)
+        if self.expression_may_resolve_to_module_namespace_object(object)
+            && let Some(live_value) = self
+                .resolve_module_namespace_live_binding_member_value(object, &materialized_property)
         {
             let capture_slots = self
                 .resolve_function_expression_capture_slots(&live_value)
@@ -811,6 +885,17 @@ impl<'a> FunctionCompiler<'a> {
                 );
                 return Some(self.resolve_member_function_capture_slot_names(capture_slots));
             }
+        }
+        if self.function_prototype_method_capture_slots_are_known_absent(
+            object,
+            &materialized_property,
+        ) {
+            if trace_capture_bindings {
+                eprintln!(
+                    "capture_slots function_prototype_builtin_absent object={object:?} property={materialized_property:?}"
+                );
+            }
+            return None;
         }
         if let Some(capture_slots) =
             self.resolve_static_module_global_object_member_function_capture_slots(object, property)

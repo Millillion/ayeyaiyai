@@ -8,10 +8,11 @@ use swc_ecma_ast::{
 };
 
 use crate::frontend::early_errors::{
-    collect_var_decl_bound_names, script_has_use_strict_directive, validate_class_syntax,
-    validate_declaration_syntax, validate_expression_syntax, validate_function_syntax,
+    BindingRestrictions, collect_var_decl_bound_names, script_has_use_strict_directive,
+    validate_class_syntax_with_restrictions, validate_declaration_syntax_with_restrictions,
+    validate_expression_syntax_with_restrictions, validate_function_syntax_with_restrictions,
     validate_import_attributes, validate_script_body_early_errors, validate_statement_syntax,
-    validate_strict_mode_early_errors_in_module_items,
+    validate_statement_syntax_with_restrictions, validate_strict_mode_early_errors_in_module_items,
     validate_strict_mode_early_errors_in_statements,
 };
 
@@ -37,13 +38,31 @@ pub(super) fn validate_script_ast_with_strict(
 pub(super) fn validate_module_ast(module: &Module, file: &swc_common::SourceFile) -> Result<()> {
     validate_module_exported_names_are_unique(module)?;
     validate_named_export_statement_boundaries(module, file)?;
+    let module_restrictions = BindingRestrictions::module_goal();
 
     for item in &module.body {
         match item {
-            ModuleItem::Stmt(statement) => validate_statement_syntax(statement, file)?,
+            ModuleItem::Stmt(statement) => {
+                validate_statement_syntax_with_restrictions(statement, file, module_restrictions)?;
+            }
             ModuleItem::ModuleDecl(module_declaration) => match module_declaration {
                 ModuleDecl::Import(import) => {
                     validate_import_attributes(import.with.as_deref())?;
+                    for specifier in &import.specifiers {
+                        let local_name = match specifier {
+                            swc_ecma_ast::ImportSpecifier::Named(named) => named.local.sym.as_ref(),
+                            swc_ecma_ast::ImportSpecifier::Default(default) => {
+                                default.local.sym.as_ref()
+                            }
+                            swc_ecma_ast::ImportSpecifier::Namespace(namespace) => {
+                                namespace.local.sym.as_ref()
+                            }
+                        };
+                        ensure!(
+                            local_name != "await",
+                            "`await` cannot be used as an import binding in a module"
+                        );
+                    }
                 }
                 ModuleDecl::ExportNamed(export) => {
                     validate_import_attributes(export.with.as_deref())?;
@@ -51,16 +70,46 @@ pub(super) fn validate_module_ast(module: &Module, file: &swc_common::SourceFile
                 ModuleDecl::ExportAll(export) => {
                     validate_import_attributes(export.with.as_deref())?;
                 }
-                ModuleDecl::ExportDecl(export) => validate_declaration_syntax(&export.decl, file)?,
+                ModuleDecl::ExportDecl(export) => validate_declaration_syntax_with_restrictions(
+                    &export.decl,
+                    file,
+                    module_restrictions,
+                )?,
                 ModuleDecl::ExportDefaultDecl(ExportDefaultDecl { decl, .. }) => match decl {
                     DefaultDecl::Fn(function) => {
-                        validate_function_syntax(&function.function, file)?
+                        if let Some(identifier) = &function.ident {
+                            ensure!(
+                                identifier.sym.as_ref() != "await",
+                                "`await` cannot be used as a function name in a module"
+                            );
+                        }
+                        validate_function_syntax_with_restrictions(
+                            &function.function,
+                            file,
+                            module_restrictions,
+                        )?
                     }
-                    DefaultDecl::Class(class) => validate_class_syntax(&class.class, file)?,
+                    DefaultDecl::Class(class) => {
+                        if let Some(identifier) = &class.ident {
+                            ensure!(
+                                identifier.sym.as_ref() != "await",
+                                "`await` cannot be used as a class name in a module"
+                            );
+                        }
+                        validate_class_syntax_with_restrictions(
+                            &class.class,
+                            file,
+                            module_restrictions,
+                        )?
+                    }
                     _ => {}
                 },
                 ModuleDecl::ExportDefaultExpr(export) => {
-                    validate_expression_syntax(&export.expr, file)?;
+                    validate_expression_syntax_with_restrictions(
+                        &export.expr,
+                        file,
+                        module_restrictions,
+                    )?;
                 }
                 _ => {}
             },

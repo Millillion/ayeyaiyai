@@ -243,6 +243,14 @@ fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -
     has_promise && has_resolve && has_reject
 }
 
+fn expression_is_array_length_member(expression: &Expression) -> Option<&Expression> {
+    let Expression::Member { object, property } = expression else {
+        return None;
+    };
+    matches!(property.as_ref(), Expression::String(name) if name == "length")
+        .then_some(object.as_ref())
+}
+
 fn async_delegate_result_member_kind(expression: &Expression) -> Option<StaticValueKind> {
     let Expression::Member { object, property } = expression else {
         return None;
@@ -324,6 +332,695 @@ enum NullishAssignmentCheck {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn array_literal_store_prototype_source() -> Expression {
+        Expression::New {
+            callee: Box::new(Expression::Identifier("Array".to_string())),
+            arguments: Vec::new(),
+        }
+    }
+
+    fn return_object_entries(statement: &Statement) -> Option<&[ObjectEntry]> {
+        let Statement::Return(Expression::Object(entries)) = statement else {
+            return None;
+        };
+        Some(entries)
+    }
+
+    fn single_statement_return_object_entries(statements: &[Statement]) -> Option<&[ObjectEntry]> {
+        let [statement] = statements else {
+            return None;
+        };
+        Self::return_object_entries(statement)
+    }
+
+    fn object_entry_data_value<'b>(
+        entries: &'b [ObjectEntry],
+        property_name: &str,
+    ) -> Option<&'b Expression> {
+        entries.iter().find_map(|entry| {
+            let ObjectEntry::Data {
+                key: Expression::String(key),
+                value,
+            } = entry
+            else {
+                return None;
+            };
+            (key == property_name).then_some(value)
+        })
+    }
+
+    fn expression_is_symbol_iterator_key(expression: &Expression) -> bool {
+        match expression {
+            Expression::Sequence(expressions) => {
+                matches!(expressions.as_slice(), [expression] if Self::expression_is_symbol_iterator_key(expression))
+            }
+            Expression::Member { object, property } => {
+                matches!(object.as_ref(), Expression::Identifier(name) if name == "Symbol")
+                    && matches!(property.as_ref(), Expression::String(name) if name == "iterator")
+            }
+            _ => false,
+        }
+    }
+
+    fn object_entry_symbol_iterator_value(entries: &[ObjectEntry]) -> Option<&Expression> {
+        entries.iter().find_map(|entry| {
+            let ObjectEntry::Data { key, value } = entry else {
+                return None;
+            };
+            Self::expression_is_symbol_iterator_key(key).then_some(value)
+        })
+    }
+
+    fn identifier_name(expression: &Expression) -> Option<&str> {
+        let Expression::Identifier(name) = expression else {
+            return None;
+        };
+        Some(name)
+    }
+
+    fn binary_identifier_addend<'b>(
+        expression: &'b Expression,
+        known_name: &str,
+    ) -> Option<&'b str> {
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = expression
+        else {
+            return None;
+        };
+        match (Self::identifier_name(left), Self::identifier_name(right)) {
+            (Some(left), Some(right)) if left == known_name => Some(right),
+            (Some(left), Some(right)) if right == known_name => Some(left),
+            _ => None,
+        }
+    }
+
+    fn expression_is_identifier_plus_one(expression: &Expression, identifier: &str) -> bool {
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = expression
+        else {
+            return false;
+        };
+        (matches!(left.as_ref(), Expression::Identifier(name) if name == identifier)
+            && matches!(right.as_ref(), Expression::Number(value) if *value == 1.0))
+            || (matches!(right.as_ref(), Expression::Identifier(name) if name == identifier)
+                && matches!(left.as_ref(), Expression::Number(value) if *value == 1.0))
+    }
+
+    fn expression_is_identifier_pair_add(
+        expression: &Expression,
+        left_name: &str,
+        right_name: &str,
+    ) -> bool {
+        let Expression::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = expression
+        else {
+            return false;
+        };
+        matches!(
+            (Self::identifier_name(left), Self::identifier_name(right)),
+            (Some(left), Some(right))
+                if (left == left_name && right == right_name)
+                    || (left == right_name && right == left_name)
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_counted_iterator_factory_call_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if arguments
+            .iter()
+            .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return None;
+        }
+        let LocalFunctionBinding::User(factory_name) =
+            self.resolve_function_binding_from_expression(callee)?
+        else {
+            return None;
+        };
+        let factory_function = self.resolve_registered_function_declaration(&factory_name)?;
+        if factory_function.kind != FunctionKind::Ordinary
+            || factory_function
+                .params
+                .iter()
+                .any(|param| param.default.is_some() || param.rest || param.name == "arguments")
+        {
+            return None;
+        }
+        let factory_return_entries =
+            Self::single_statement_return_object_entries(&factory_function.body)?;
+        let iterator_function_name = Self::identifier_name(
+            Self::object_entry_symbol_iterator_value(factory_return_entries)?,
+        )?
+        .to_string();
+
+        let iterator_function =
+            self.resolve_registered_function_declaration(&iterator_function_name)?;
+        let [
+            Statement::Var {
+                name: index_name,
+                value: Expression::Number(index_start),
+            },
+            iterator_return,
+        ] = iterator_function.body.as_slice()
+        else {
+            return None;
+        };
+        if *index_start != 0.0 {
+            return None;
+        }
+        let iterator_return_entries = Self::return_object_entries(iterator_return)?;
+        let next_function_name = Self::identifier_name(Self::object_entry_data_value(
+            iterator_return_entries,
+            "next",
+        )?)?
+        .to_string();
+
+        let next_function = self.resolve_registered_function_declaration(&next_function_name)?;
+        let [step_if, completion_return] = next_function.body.as_slice() else {
+            return None;
+        };
+        let Statement::If {
+            condition,
+            then_branch,
+            else_branch,
+        } = step_if
+        else {
+            return None;
+        };
+        if !else_branch.is_empty() {
+            return None;
+        }
+        let Expression::Binary {
+            op: BinaryOp::LessThan,
+            left,
+            right,
+        } = condition
+        else {
+            return None;
+        };
+        if !matches!(left.as_ref(), Expression::Identifier(name) if name == index_name) {
+            return None;
+        }
+        let count_name = Self::identifier_name(right)?;
+
+        let then_statements = match then_branch.as_slice() {
+            [Statement::Block { body }] => body.as_slice(),
+            statements => statements,
+        };
+        let [
+            Statement::Var {
+                name: value_name,
+                value: step_value_expression,
+            },
+            Statement::Assign {
+                name: assigned_index_name,
+                value: index_update_expression,
+            },
+            step_return,
+        ] = then_statements
+        else {
+            return None;
+        };
+        if assigned_index_name != index_name
+            || !Self::expression_is_identifier_plus_one(index_update_expression, index_name)
+        {
+            return None;
+        }
+        let base_name = Self::binary_identifier_addend(step_value_expression, index_name)?;
+
+        let step_return_entries = Self::return_object_entries(step_return)?;
+        if !matches!(
+            Self::object_entry_data_value(step_return_entries, "value"),
+            Some(Expression::Identifier(name)) if name == value_name
+        ) || !matches!(
+            Self::object_entry_data_value(step_return_entries, "done"),
+            Some(Expression::Bool(false))
+        ) {
+            return None;
+        }
+
+        let completion_return_entries = Self::return_object_entries(completion_return)?;
+        if !matches!(
+            Self::object_entry_data_value(completion_return_entries, "value"),
+            Some(expression) if Self::expression_is_identifier_pair_add(expression, base_name, count_name)
+        ) || !matches!(
+            Self::object_entry_data_value(completion_return_entries, "done"),
+            Some(Expression::Bool(true))
+        ) {
+            return None;
+        }
+
+        let base_param_index = factory_function
+            .params
+            .iter()
+            .position(|param| param.name == base_name)?;
+        let count_param_index = factory_function
+            .params
+            .iter()
+            .position(|param| param.name == count_name)?;
+        let base_argument = match arguments.get(base_param_index)? {
+            CallArgument::Expression(expression) => expression,
+            CallArgument::Spread(_) => return None,
+        };
+        let count_argument = match arguments.get(count_param_index)? {
+            CallArgument::Expression(expression) => expression,
+            CallArgument::Spread(_) => return None,
+        };
+        let base = self.resolve_static_number_value(base_argument)?;
+        let count = self.resolve_static_number_value(count_argument)?;
+        if !base.is_finite()
+            || !count.is_finite()
+            || count < 0.0
+            || count.fract() != 0.0
+            || count > 256.0
+        {
+            return None;
+        }
+        Some(ArrayValueBinding {
+            values: (0..count as usize)
+                .map(|index| Some(Expression::Number(base + index as f64)))
+                .collect(),
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_array_literal_spread_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        self.array_literal_spread_binding(expression, false)
+    }
+
+    fn array_literal_spread_binding(
+        &self,
+        expression: &Expression,
+        allow_runtime_reads: bool,
+    ) -> Option<ArrayValueBinding> {
+        self.array_literal_store_binding(expression, allow_runtime_reads)
+            .or_else(|| self.static_counted_iterator_factory_call_binding(expression))
+            .or_else(|| {
+                matches!(expression, Expression::Identifier(_))
+                    .then(|| self.resolve_array_binding_from_expression(expression))
+                    .flatten()
+            })
+    }
+
+    pub(in crate::backend::direct_wasm) fn static_array_literal_store_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        self.array_literal_store_binding(expression, false)
+    }
+
+    fn runtime_array_literal_store_binding(
+        &self,
+        expression: &Expression,
+    ) -> Option<ArrayValueBinding> {
+        self.array_literal_store_binding(expression, true)
+    }
+
+    fn array_literal_store_binding(
+        &self,
+        expression: &Expression,
+        allow_runtime_reads: bool,
+    ) -> Option<ArrayValueBinding> {
+        let Expression::Array(elements) = expression else {
+            return None;
+        };
+        let mut values = Vec::new();
+        for element in elements {
+            match element {
+                ArrayElement::Expression(expression) => {
+                    if crate::ir::hir::expression_is_array_elision(expression) {
+                        values.push(None);
+                    } else {
+                        values.push(Some(
+                            self.array_literal_store_value(expression, allow_runtime_reads)?,
+                        ));
+                    }
+                }
+                ArrayElement::Spread(expression) => {
+                    let spread_binding =
+                        self.array_literal_spread_binding(expression, allow_runtime_reads)?;
+                    values.extend(
+                        spread_binding
+                            .values
+                            .into_iter()
+                            .map(|value| Some(value.unwrap_or(Expression::Undefined))),
+                    );
+                }
+            }
+        }
+        Some(ArrayValueBinding { values })
+    }
+
+    fn array_literal_store_value(
+        &self,
+        expression: &Expression,
+        allow_runtime_reads: bool,
+    ) -> Option<Expression> {
+        match expression {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => Some(expression.clone()),
+            Expression::Identifier(_) | Expression::This => {
+                if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
+                    expression,
+                    self.current_function_name(),
+                ) {
+                    return Some(primitive);
+                }
+                let materialized = self.materialize_static_expression(expression);
+                if !static_expression_matches(&materialized, expression)
+                    && inline_summary_side_effect_free_expression(&materialized)
+                {
+                    return Some(materialized);
+                }
+                allow_runtime_reads.then(|| expression.clone())
+            }
+            Expression::Call { .. } => {
+                self.static_array_literal_user_call_return_value(expression, allow_runtime_reads)
+            }
+            Expression::Unary { expression, op } => self
+                .array_literal_store_value(expression, allow_runtime_reads)
+                .map(|expression| Expression::Unary {
+                    op: *op,
+                    expression: Box::new(expression),
+                })
+                .and_then(|expression| {
+                    inline_summary_side_effect_free_expression(&expression)
+                        .then(|| self.materialize_static_expression(&expression))
+                }),
+            Expression::Binary { left, op, right } => {
+                let left = self.array_literal_store_value(left, allow_runtime_reads)?;
+                let right = self.array_literal_store_value(right, allow_runtime_reads)?;
+                let expression = Expression::Binary {
+                    op: *op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+                inline_summary_side_effect_free_expression(&expression)
+                    .then(|| self.materialize_static_expression(&expression))
+            }
+            _ => None,
+        }
+    }
+
+    fn static_array_literal_user_call_return_value(
+        &self,
+        expression: &Expression,
+        allow_runtime_reads: bool,
+    ) -> Option<Expression> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        if arguments
+            .iter()
+            .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return None;
+        }
+        let LocalFunctionBinding::User(function_name) =
+            self.resolve_function_binding_from_expression(callee)?
+        else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        if user_function.kind != FunctionKind::Ordinary
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || self.user_function_uses_direct_arguments_object(user_function)
+            || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(&function_name)?;
+        if function.kind != FunctionKind::Ordinary
+            || function
+                .params
+                .iter()
+                .any(|param| param.default.is_some() || param.rest || param.name == "arguments")
+        {
+            return None;
+        }
+        let (last, prefix) = function.body.split_last()?;
+        if prefix
+            .iter()
+            .any(Self::statement_unconditionally_transfers_control)
+        {
+            return None;
+        }
+        let Statement::Return(Expression::Identifier(returned_name)) = last else {
+            return None;
+        };
+        let param_index = function
+            .params
+            .iter()
+            .position(|param| param.name == *returned_name)?;
+        let Some(argument) = arguments.get(param_index) else {
+            return Some(Expression::Undefined);
+        };
+        let CallArgument::Expression(argument) = argument else {
+            return None;
+        };
+        self.array_literal_store_value(argument, allow_runtime_reads)
+    }
+
+    fn static_array_literal_identifier_value_store(
+        &self,
+        canonical_value_expression: &Expression,
+        resolved_local_binding: Option<(String, u32)>,
+    ) -> Option<PreparedIdentifierValueStore> {
+        let static_array_binding =
+            self.static_array_literal_store_binding(canonical_value_expression);
+        let (array_binding, object_binding, object_expression) =
+            if let Some(array_binding) = static_array_binding {
+                let object_binding = object_binding_from_array_binding(&array_binding);
+                let object_expression = object_binding_to_expression(&object_binding);
+                (array_binding, Some(object_binding), object_expression)
+            } else {
+                (
+                    self.runtime_array_literal_store_binding(canonical_value_expression)?,
+                    None,
+                    canonical_value_expression.clone(),
+                )
+            };
+        let tracked_object_expression = object_binding
+            .as_ref()
+            .map(|_| object_expression.clone())
+            .unwrap_or(Expression::Undefined);
+        Some(PreparedIdentifierValueStore {
+            canonical_value_expression: canonical_value_expression.clone(),
+            tracked_value_expression: object_expression.clone(),
+            descriptor_binding_expression: Expression::Undefined,
+            tracked_object_expression,
+            call_source_snapshot_expression: None,
+            prototype_source_snapshot_expression: Some(Self::array_literal_store_prototype_source()),
+            function_binding_expression: Expression::Undefined,
+            function_binding: None,
+            object_binding_expression: object_expression.clone(),
+            object_binding,
+            kind: Some(StaticValueKind::Object),
+            static_string_value: None,
+            exact_static_number: None,
+            array_binding: Some(array_binding),
+            module_assignment_expression: object_expression,
+            resolved_local_binding,
+            returned_descriptor_binding: None,
+            runtime_value_override: None,
+            opaque_runtime_value: false,
+        })
+    }
+
+    fn object_literal_store_prototype_source(&self, entries: &[ObjectEntry]) -> Option<Expression> {
+        for entry in entries.iter().rev() {
+            let ObjectEntry::Data { key, value } = entry else {
+                continue;
+            };
+            if !matches!(key, Expression::String(name) if name == "__proto__") {
+                continue;
+            }
+            if matches!(
+                value,
+                Expression::Number(_)
+                    | Expression::BigInt(_)
+                    | Expression::String(_)
+                    | Expression::Bool(_)
+                    | Expression::Undefined
+            ) || matches!(value, Expression::Identifier(name) if name == "undefined")
+                || matches!(
+                    value,
+                    Expression::Call { callee, .. }
+                        if matches!(callee.as_ref(), Expression::Identifier(name) if name == "Symbol")
+                )
+            {
+                return Some(Self::prototype_member_expression("Object"));
+            }
+            if matches!(value, Expression::Null) {
+                return Some(Expression::Null);
+            }
+            return self
+                .resolve_static_object_identity_expression(value)
+                .or_else(|| Some(value.clone()));
+        }
+        Some(Self::prototype_member_expression("Object"))
+    }
+
+    fn static_object_literal_store_value(&self, expression: &Expression) -> Option<Expression> {
+        if !inline_summary_side_effect_free_expression(expression) {
+            return None;
+        }
+        if matches!(expression, Expression::Identifier(_))
+            && self.infer_value_kind(expression) == Some(StaticValueKind::Object)
+        {
+            return Some(expression.clone());
+        }
+        if let Some(primitive) = self.resolve_static_primitive_expression_with_context(
+            expression,
+            self.current_function_name(),
+        ) {
+            return Some(primitive);
+        }
+        let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression)
+            && inline_summary_side_effect_free_expression(&materialized)
+        {
+            return Some(materialized);
+        }
+        Some(expression.clone())
+    }
+
+    fn static_object_literal_identifier_value_store(
+        &self,
+        canonical_value_expression: &Expression,
+        resolved_local_binding: Option<(String, u32)>,
+    ) -> Option<PreparedIdentifierValueStore> {
+        let Expression::Object(entries) = canonical_value_expression else {
+            return None;
+        };
+        let mut object_binding = empty_object_value_binding();
+        for entry in entries {
+            let ObjectEntry::Data { key, value } = entry else {
+                return None;
+            };
+            if object_entry_is_literal_proto_setter(entry) {
+                if !inline_summary_side_effect_free_expression(value) {
+                    return None;
+                }
+                continue;
+            }
+            if !inline_summary_side_effect_free_expression(key) {
+                return None;
+            }
+            let key = static_property_name_from_expression(key).map(Expression::String)?;
+            let value = self.static_object_literal_store_value(value)?;
+            object_binding_define_property(&mut object_binding, key, value, true);
+        }
+
+        let object_binding = self.normalize_prepared_object_binding_property_keys(object_binding);
+        let object_expression = object_binding_to_expression(&object_binding);
+        Some(PreparedIdentifierValueStore {
+            canonical_value_expression: canonical_value_expression.clone(),
+            tracked_value_expression: object_expression.clone(),
+            descriptor_binding_expression: Expression::Undefined,
+            tracked_object_expression: object_expression.clone(),
+            call_source_snapshot_expression: None,
+            prototype_source_snapshot_expression: self
+                .object_literal_store_prototype_source(entries),
+            function_binding_expression: Expression::Undefined,
+            function_binding: None,
+            object_binding_expression: object_expression.clone(),
+            object_binding: Some(object_binding),
+            kind: Some(StaticValueKind::Object),
+            static_string_value: None,
+            exact_static_number: None,
+            array_binding: None,
+            module_assignment_expression: object_expression,
+            resolved_local_binding,
+            returned_descriptor_binding: None,
+            runtime_value_override: None,
+            opaque_runtime_value: false,
+        })
+    }
+
+    fn identifier_may_name_generator_function_source(&self, name: &str, depth: usize) -> bool {
+        if depth > 4 {
+            return true;
+        }
+        if matches!(name, "GeneratorFunction" | "%GeneratorFunction%")
+            || self
+                .user_function(name)
+                .is_some_and(|user_function| user_function.is_generator())
+            || self
+                .resolve_user_function_by_binding_name(name)
+                .is_some_and(|user_function| user_function.is_generator())
+        {
+            return true;
+        }
+        let alias = self
+            .state
+            .speculation
+            .static_semantics
+            .local_value_binding(name)
+            .or_else(|| self.global_value_binding(name));
+        matches!(
+            alias,
+            Some(Expression::Identifier(alias_name))
+                if self.identifier_may_name_generator_function_source(alias_name, depth + 1)
+        )
+    }
+
+    fn call_callee_may_resolve_simple_generator_source(&self, callee: &Expression) -> bool {
+        match callee {
+            Expression::Identifier(name) => {
+                self.identifier_may_name_generator_function_source(name, 0)
+            }
+            Expression::Member { object, property } => {
+                let Expression::String(property_name) = property.as_ref() else {
+                    return true;
+                };
+                match property_name.as_str() {
+                    "call" | "apply" => match object.as_ref() {
+                        Expression::Identifier(name) => {
+                            self.identifier_may_name_generator_function_source(name, 0)
+                        }
+                        _ => true,
+                    },
+                    "bind" => false,
+                    _ => true,
+                }
+            }
+            Expression::Call { .. } | Expression::New { .. } => true,
+            _ => false,
+        }
+    }
+
+    fn static_array_length_store_snapshot(&self, expression: &Expression) -> Option<Expression> {
+        if self.expression_depends_on_active_loop_assignment(expression) {
+            return None;
+        }
+        let object = expression_is_array_length_member(expression)?;
+        let array_binding = self.resolve_array_binding_from_expression(object)?;
+        Some(Expression::Number(array_binding.values.len() as f64))
+    }
+
     fn normalize_prepared_object_binding_property_key(&self, property: &Expression) -> Expression {
         let resolved_key = self.resolve_property_key_expression(property);
         if let Some(key) = resolved_key.as_ref() {
@@ -1920,12 +2617,322 @@ impl<'a> FunctionCompiler<'a> {
         is_pure_literal(&materialized).then_some(materialized)
     }
 
+    fn numeric_self_update_value(&self, name: &str, expression: &Expression) -> Option<Expression> {
+        let Expression::Binary { op, left, right } = expression else {
+            return None;
+        };
+        let left_is_target =
+            matches!(left.as_ref(), Expression::Identifier(source) if source == name);
+        let right_is_target =
+            matches!(right.as_ref(), Expression::Identifier(source) if source == name);
+        if !left_is_target && !right_is_target {
+            return None;
+        }
+
+        let target_expression = Expression::Identifier(name.to_string());
+        let current = self.resolve_static_number_value(&target_expression)?;
+        let left_number = if left_is_target {
+            current
+        } else {
+            self.resolve_static_number_value(left)?
+        };
+        let right_number = if right_is_target {
+            current
+        } else {
+            self.resolve_static_number_value(right)?
+        };
+        let value = match op {
+            BinaryOp::Add => left_number + right_number,
+            BinaryOp::Subtract => left_number - right_number,
+            BinaryOp::Multiply => left_number * right_number,
+            BinaryOp::Divide => left_number / right_number,
+            BinaryOp::Modulo => left_number % right_number,
+            BinaryOp::Exponentiate => left_number.powf(right_number),
+            _ => return None,
+        };
+        Some(Expression::Number(value))
+    }
+
+    fn expression_is_numeric_self_arithmetic_shape(name: &str, expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(source) => source == name,
+            Expression::Number(_) => true,
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } => Self::expression_is_numeric_self_arithmetic_shape(name, expression),
+            Expression::Binary { op, left, right } => {
+                matches!(
+                    op,
+                    BinaryOp::Add
+                        | BinaryOp::Subtract
+                        | BinaryOp::Multiply
+                        | BinaryOp::Divide
+                        | BinaryOp::Modulo
+                        | BinaryOp::Exponentiate
+                ) && Self::expression_is_numeric_self_arithmetic_shape(name, left)
+                    && Self::expression_is_numeric_self_arithmetic_shape(name, right)
+            }
+            _ => false,
+        }
+    }
+
+    fn expression_is_self_referential_arithmetic(name: &str, expression: &Expression) -> bool {
+        fn arithmetic_expression_mentions_name(name: &str, expression: &Expression) -> bool {
+            match expression {
+                Expression::Identifier(source) => source == name,
+                Expression::Number(_) | Expression::BigInt(_) => false,
+                Expression::Unary { expression, .. } => {
+                    arithmetic_expression_mentions_name(name, expression)
+                }
+                Expression::Binary { left, right, .. } => {
+                    arithmetic_expression_mentions_name(name, left)
+                        || arithmetic_expression_mentions_name(name, right)
+                }
+                Expression::Member { object, property } => {
+                    arithmetic_expression_mentions_name(name, object)
+                        || arithmetic_expression_mentions_name(name, property)
+                }
+                _ => false,
+            }
+        }
+
+        matches!(
+            expression,
+            Expression::Binary {
+                op: BinaryOp::Add
+                    | BinaryOp::Subtract
+                    | BinaryOp::Multiply
+                    | BinaryOp::Divide
+                    | BinaryOp::Modulo
+                    | BinaryOp::Exponentiate
+                    | BinaryOp::BitwiseAnd
+                    | BinaryOp::BitwiseOr
+                    | BinaryOp::BitwiseXor
+                    | BinaryOp::LeftShift
+                    | BinaryOp::RightShift
+                    | BinaryOp::UnsignedRightShift,
+                ..
+            }
+        ) && arithmetic_expression_mentions_name(name, expression)
+    }
+
+    fn runtime_opaque_identifier_value_store(
+        canonical_value_expression: Expression,
+        resolved_local_binding: Option<(String, u32)>,
+        kind: Option<StaticValueKind>,
+    ) -> PreparedIdentifierValueStore {
+        PreparedIdentifierValueStore {
+            canonical_value_expression: canonical_value_expression.clone(),
+            tracked_value_expression: canonical_value_expression.clone(),
+            descriptor_binding_expression: Expression::Undefined,
+            tracked_object_expression: Expression::Undefined,
+            call_source_snapshot_expression: None,
+            prototype_source_snapshot_expression: None,
+            function_binding_expression: Expression::Undefined,
+            function_binding: None,
+            object_binding_expression: Expression::Undefined,
+            object_binding: None,
+            kind: kind.or(Some(StaticValueKind::Unknown)),
+            static_string_value: None,
+            exact_static_number: None,
+            array_binding: None,
+            module_assignment_expression: canonical_value_expression,
+            resolved_local_binding,
+            returned_descriptor_binding: None,
+            runtime_value_override: None,
+            opaque_runtime_value: true,
+        }
+    }
+
+    fn self_referential_arithmetic_opaque_kind(
+        &self,
+        name: &str,
+        expression: &Expression,
+    ) -> Option<StaticValueKind> {
+        fn is_numeric(kind: Option<StaticValueKind>) -> bool {
+            matches!(kind, Some(StaticValueKind::Number))
+        }
+
+        match expression {
+            Expression::Identifier(source) if source == name => self.lookup_identifier_kind(name),
+            Expression::Number(_) => Some(StaticValueKind::Number),
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } => is_numeric(self.self_referential_arithmetic_opaque_kind(name, expression))
+                .then_some(StaticValueKind::Number),
+            Expression::Binary { op, left, right } => {
+                if !matches!(
+                    op,
+                    BinaryOp::Add
+                        | BinaryOp::Subtract
+                        | BinaryOp::Multiply
+                        | BinaryOp::Divide
+                        | BinaryOp::Modulo
+                        | BinaryOp::Exponentiate
+                        | BinaryOp::BitwiseAnd
+                        | BinaryOp::BitwiseOr
+                        | BinaryOp::BitwiseXor
+                        | BinaryOp::LeftShift
+                        | BinaryOp::RightShift
+                        | BinaryOp::UnsignedRightShift
+                ) {
+                    return None;
+                }
+                let left_kind = self.self_referential_arithmetic_operand_kind(name, left);
+                let right_kind = self.self_referential_arithmetic_operand_kind(name, right);
+                matches!(
+                    (left_kind, right_kind),
+                    (Some(StaticValueKind::Number), Some(StaticValueKind::Number))
+                )
+                .then_some(StaticValueKind::Number)
+            }
+            _ => self.self_referential_arithmetic_leaf_kind(expression),
+        }
+    }
+
+    fn self_referential_arithmetic_operand_kind(
+        &self,
+        name: &str,
+        expression: &Expression,
+    ) -> Option<StaticValueKind> {
+        match expression {
+            Expression::Binary { .. }
+            | Expression::Unary {
+                op: UnaryOp::Negate,
+                ..
+            }
+            | Expression::Identifier(_)
+            | Expression::Number(_) => self.self_referential_arithmetic_opaque_kind(name, expression),
+            _ => self.self_referential_arithmetic_leaf_kind(expression),
+        }
+    }
+
+    fn self_referential_arithmetic_leaf_kind(
+        &self,
+        expression: &Expression,
+    ) -> Option<StaticValueKind> {
+        if self.expression_is_numeric_addition_operand(expression) {
+            return Some(StaticValueKind::Number);
+        }
+        let materialized = self.materialize_static_expression(expression);
+        if !static_expression_matches(&materialized, expression)
+            && self.expression_is_numeric_addition_operand(&materialized)
+        {
+            return Some(StaticValueKind::Number);
+        }
+        None
+    }
+
+    fn primitive_identifier_value_store(
+        value: Expression,
+        resolved_local_binding: Option<(String, u32)>,
+    ) -> PreparedIdentifierValueStore {
+        let kind = match &value {
+            Expression::Number(_) => StaticValueKind::Number,
+            Expression::BigInt(_) => StaticValueKind::BigInt,
+            Expression::String(_) => StaticValueKind::String,
+            Expression::Bool(_) => StaticValueKind::Bool,
+            Expression::Null => StaticValueKind::Null,
+            Expression::Undefined => StaticValueKind::Undefined,
+            _ => StaticValueKind::Unknown,
+        };
+        let static_string_value = match &value {
+            Expression::String(text) => Some(text.clone()),
+            _ => None,
+        };
+        PreparedIdentifierValueStore {
+            canonical_value_expression: value.clone(),
+            tracked_value_expression: value.clone(),
+            descriptor_binding_expression: value.clone(),
+            tracked_object_expression: Expression::Undefined,
+            call_source_snapshot_expression: None,
+            prototype_source_snapshot_expression: None,
+            function_binding_expression: Expression::Undefined,
+            function_binding: None,
+            object_binding_expression: Expression::Undefined,
+            object_binding: None,
+            kind: Some(kind),
+            static_string_value,
+            exact_static_number: None,
+            array_binding: None,
+            module_assignment_expression: value,
+            resolved_local_binding,
+            returned_descriptor_binding: None,
+            runtime_value_override: None,
+            opaque_runtime_value: false,
+        }
+    }
+
+    fn number_identifier_value_store(
+        value: Expression,
+        resolved_local_binding: Option<(String, u32)>,
+    ) -> PreparedIdentifierValueStore {
+        Self::primitive_identifier_value_store(value, resolved_local_binding)
+    }
+
+    fn static_call_result_object_literal_store_is_safe(
+        &self,
+        canonical_value_expression: &Expression,
+        tracked_value_expression: &Expression,
+    ) -> bool {
+        let Expression::Call { callee, arguments } = canonical_value_expression else {
+            return false;
+        };
+        if !matches!(tracked_value_expression, Expression::Object(_)) {
+            return false;
+        }
+        if arguments.iter().any(|argument| match argument {
+            CallArgument::Expression(expression) => {
+                !inline_summary_side_effect_free_expression(expression)
+            }
+            CallArgument::Spread(_) => true,
+        }) {
+            return false;
+        }
+        let Some(user_function) = self.resolve_user_function_from_expression(callee) else {
+            return false;
+        };
+        if user_function.is_async()
+            || user_function.is_generator()
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || self.user_function_uses_direct_arguments_object(user_function)
+            || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return false;
+        }
+        self.prepared_user_function_assigned_nonlocal_bindings(user_function)
+            .is_empty()
+            && self
+                .collect_user_function_updated_nonlocal_bindings(user_function)
+                .is_empty()
+    }
+
     pub(super) fn prepare_identifier_value_store(
         &mut self,
         name: &str,
         value_expression: &Expression,
     ) -> PreparedIdentifierValueStore {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
+        let trace_prepare_timing = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_PREPARE_TIMING");
+        let timing_start = trace_prepare_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_timing = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "identifier_prepare_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:prepare:start");
             if std::env::var_os("AYY_TRACE_IDENTIFIER_STORE_BACKTRACE").is_some() {
@@ -1939,6 +2946,7 @@ impl<'a> FunctionCompiler<'a> {
         let private_brand_initializer =
             self.is_private_brand_binding_store_initializer(name, value_expression);
         let resolved_local_binding = self.resolve_current_local_binding(name);
+        trace_timing("resolve_local");
         if private_brand_initializer || is_for_in_keys_temp {
             let tracked_value_expression = Expression::Undefined;
             return PreparedIdentifierValueStore {
@@ -1995,6 +3003,38 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(folded) = self.fold_executed_assignment_store_value(&canonical_value_expression)
         {
             canonical_value_expression = folded;
+        }
+        trace_timing("canonical");
+        if Self::expression_is_numeric_self_arithmetic_shape(name, &canonical_value_expression)
+            && let Some(number) = self.resolve_static_number_value(&canonical_value_expression)
+        {
+            canonical_value_expression = Expression::Number(number);
+        }
+        if let Some(folded) = self.numeric_self_update_value(name, &canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:numeric_self_update {folded:?}");
+            }
+            return Self::number_identifier_value_store(folded, resolved_local_binding);
+        }
+        if let Some(value) = self.resolve_simple_array_append_return_argument_static_call_value(
+            &canonical_value_expression,
+        ) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:simple_array_append_return_value {value:?}");
+            }
+            return Self::primitive_identifier_value_store(value, resolved_local_binding);
+        }
+        if Self::expression_is_self_referential_arithmetic(name, &canonical_value_expression) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:opaque_self_referential_arithmetic");
+            }
+            let kind =
+                self.self_referential_arithmetic_opaque_kind(name, &canonical_value_expression);
+            return Self::runtime_opaque_identifier_value_store(
+                canonical_value_expression,
+                resolved_local_binding,
+                kind,
+            );
         }
         let active_loop_string_assignment = self
             .active_loop_string_assignment_snapshot(&canonical_value_expression)
@@ -2054,6 +3094,24 @@ impl<'a> FunctionCompiler<'a> {
         }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:canonical {canonical_value_expression:?}");
+        }
+        if let Some(store) = self.static_array_literal_identifier_value_store(
+            &canonical_value_expression,
+            resolved_local_binding.clone(),
+        ) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:static_array_literal_fast_path");
+            }
+            return store;
+        }
+        if let Some(store) = self.static_object_literal_identifier_value_store(
+            &canonical_value_expression,
+            resolved_local_binding.clone(),
+        ) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:static_object_literal_fast_path");
+            }
+            return store;
         }
         if expression_is_dynamic_module_namespace_descriptor_call(self, &canonical_value_expression)
         {
@@ -2436,7 +3494,7 @@ impl<'a> FunctionCompiler<'a> {
                 opaque_runtime_value: false,
             };
         }
-        let tracked_value_expression = match &canonical_value_expression {
+        let mut tracked_value_expression = match &canonical_value_expression {
             Expression::Call { callee, arguments } => {
                 let preserve_canonical_call_expression = local_array_iterator_next_call
                     || local_simple_async_generator_next_call
@@ -2444,9 +3502,10 @@ impl<'a> FunctionCompiler<'a> {
                     || self
                         .resolve_user_function_from_expression(callee)
                         .is_some_and(|user_function| user_function.is_async())
-                    || self
-                        .resolve_simple_generator_source(&canonical_value_expression)
-                        .is_some()
+                    || (self.call_callee_may_resolve_simple_generator_source(callee)
+                        && self
+                            .resolve_simple_generator_source(&canonical_value_expression)
+                            .is_some())
                     || self
                         .resolve_async_yield_delegate_generator_plan(
                             &canonical_value_expression,
@@ -2500,6 +3559,26 @@ impl<'a> FunctionCompiler<'a> {
             }
             _ => canonical_value_expression.clone(),
         };
+        trace_timing("tracked");
+        if let Some(length_snapshot) =
+            self.static_array_length_store_snapshot(&tracked_value_expression)
+        {
+            tracked_value_expression = length_snapshot;
+        }
+        trace_timing("array_length_snapshot");
+        if self.static_call_result_object_literal_store_is_safe(
+            &canonical_value_expression,
+            &tracked_value_expression,
+        ) && let Some(store) = self.static_object_literal_identifier_value_store(
+            &tracked_value_expression,
+            resolved_local_binding.clone(),
+        ) {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:static_call_object_literal_fast_path");
+            }
+            trace_timing("static_call_object_literal_fast_path");
+            return store;
+        }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:tracked {tracked_value_expression:?}");
         }
@@ -2532,8 +3611,12 @@ impl<'a> FunctionCompiler<'a> {
         if static_expression_matches(&tracked_value_expression, &canonical_value_expression)
             && expression_is_non_prototype_nested_member(&canonical_value_expression)
         {
+            let kind = self
+                .snapshot_effectful_member_read_for_static_store(&canonical_value_expression)
+                .and_then(|value| self.infer_value_kind(&value))
+                .unwrap_or(StaticValueKind::Unknown);
             if trace_identifier_store {
-                eprintln!("identifier_store:{name}:nested_member_unknown_fast_path");
+                eprintln!("identifier_store:{name}:nested_member_fast_path kind={kind:?}");
             }
             return PreparedIdentifierValueStore {
                 canonical_value_expression: canonical_value_expression.clone(),
@@ -2546,7 +3629,7 @@ impl<'a> FunctionCompiler<'a> {
                 function_binding: None,
                 object_binding_expression: Expression::Undefined,
                 object_binding: None,
-                kind: Some(StaticValueKind::Unknown),
+                kind: Some(kind),
                 static_string_value: None,
                 exact_static_number: None,
                 array_binding: None,
@@ -2673,8 +3756,9 @@ impl<'a> FunctionCompiler<'a> {
                 opaque_runtime_value: false,
             };
         }
-        if let Some(function_binding) =
-            self.resolve_function_binding_from_expression(&tracked_value_expression)
+        if !matches!(tracked_value_expression, Expression::Object(_))
+            && let Some(function_binding) =
+                self.resolve_function_binding_from_expression(&tracked_value_expression)
             && matches!(
                 &function_binding,
                 LocalFunctionBinding::Builtin(function_name)
@@ -2708,6 +3792,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let resolved_descriptor_binding =
             self.resolve_descriptor_binding_from_expression(&canonical_value_expression);
+        trace_timing("descriptor_binding");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:descriptor");
         }
@@ -2724,6 +3809,7 @@ impl<'a> FunctionCompiler<'a> {
                 }),
             _ => None,
         };
+        trace_timing("returned_descriptor_binding");
         let descriptor_binding_expression = if resolved_descriptor_binding.is_some() {
             canonical_value_expression.clone()
         } else {
@@ -2737,6 +3823,7 @@ impl<'a> FunctionCompiler<'a> {
                 )
             })
             .unwrap_or_else(|| tracked_value_expression.clone());
+        trace_timing("tracked_object_expression");
         let matched_call_snapshot = matches!(
             canonical_value_expression,
             Expression::Call { .. } | Expression::New { .. }
@@ -2757,6 +3844,7 @@ impl<'a> FunctionCompiler<'a> {
                 })
         })
         .flatten();
+        trace_timing("matched_call_snapshot");
         let snapshot_is_async_function_call = matched_call_snapshot.is_some_and(|snapshot| {
             self.user_function(&snapshot.function_name)
                 .is_some_and(|function| function.is_async() && !function.is_generator())
@@ -2779,6 +3867,7 @@ impl<'a> FunctionCompiler<'a> {
                     )
                 })
         });
+        trace_timing("call_result_snapshot");
         let call_snapshot_function_context =
             matched_call_snapshot.map(|snapshot| snapshot.function_name.as_str());
         let call_source_snapshot_expression =
@@ -2805,17 +3894,20 @@ impl<'a> FunctionCompiler<'a> {
                     )
                     .or_else(|| self.resolve_function_binding_from_expression(expression))
                 });
+        trace_timing("call_result_function_binding");
         let call_result_has_function_binding = call_result_function_binding.is_some();
-        let raw_function_binding_expression =
-            if local_simple_async_generator_next_call && call_result_function_binding.is_none() {
-                Expression::Undefined
-            } else {
-                call_result_snapshot_expression
-                    .as_ref()
-                    .filter(|_| call_result_function_binding.is_some())
-                    .unwrap_or(&tracked_value_expression)
-                    .clone()
-            };
+        let value_is_object_literal = matches!(canonical_value_expression, Expression::Object(_));
+        let raw_function_binding_expression = if value_is_object_literal
+            || (local_simple_async_generator_next_call && call_result_function_binding.is_none())
+        {
+            Expression::Undefined
+        } else {
+            call_result_snapshot_expression
+                .as_ref()
+                .filter(|_| call_result_function_binding.is_some())
+                .unwrap_or(&tracked_value_expression)
+                .clone()
+        };
         let resolved_function_binding_expression =
             if local_simple_async_generator_next_call && call_result_function_binding.is_none() {
                 raw_function_binding_expression.clone()
@@ -2832,9 +3924,9 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             resolved_function_binding_expression
         };
-        let function_binding = if self
-            .expression_depends_on_active_loop_assignment(&function_binding_expression)
-        {
+        let function_binding = if value_is_object_literal {
+            None
+        } else if self.expression_depends_on_active_loop_assignment(&function_binding_expression) {
             self.resolve_function_binding_from_expression_with_context(
                 value_expression,
                 call_snapshot_function_context,
@@ -2849,10 +3941,49 @@ impl<'a> FunctionCompiler<'a> {
             .or(call_result_function_binding)
             .or_else(|| self.resolve_function_binding_from_expression(&function_binding_expression))
         };
+        trace_timing("function_binding");
         if trace_identifier_store {
             eprintln!(
                 "identifier_store:{name}:function_binding snapshot_context={call_snapshot_function_context:?} call_result={call_result_snapshot_expression:?} raw={raw_function_binding_expression:?} expr={function_binding_expression:?} binding={function_binding:?}"
             );
+        }
+        if matched_call_snapshot.is_some()
+            && !local_simple_async_generator_next_call
+            && resolved_descriptor_binding.is_none()
+            && function_binding.is_some()
+            && matches!(
+                call_result_snapshot_expression.as_ref(),
+                Some(Expression::Identifier(_) | Expression::This)
+            )
+        {
+            let tracked_function_value = call_result_snapshot_expression
+                .as_ref()
+                .expect("matched Some above")
+                .clone();
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:call_snapshot_function_fast_path");
+            }
+            return PreparedIdentifierValueStore {
+                canonical_value_expression: canonical_value_expression.clone(),
+                tracked_value_expression: tracked_function_value.clone(),
+                descriptor_binding_expression: Expression::Undefined,
+                tracked_object_expression: Expression::Undefined,
+                call_source_snapshot_expression,
+                prototype_source_snapshot_expression,
+                function_binding_expression,
+                function_binding,
+                object_binding_expression: Expression::Undefined,
+                object_binding: None,
+                kind: Some(StaticValueKind::Function),
+                static_string_value: None,
+                exact_static_number: None,
+                array_binding: None,
+                module_assignment_expression: tracked_function_value,
+                resolved_local_binding,
+                returned_descriptor_binding: None,
+                runtime_value_override: None,
+                opaque_runtime_value: false,
+            };
         }
         if matches!(canonical_value_expression, Expression::New { .. })
             && matched_call_snapshot.is_some_and(|snapshot| snapshot.result_expression.is_none())
@@ -2888,6 +4019,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             self.resolve_object_binding_from_expression(&canonical_value_expression)
         };
+        trace_timing("canonical_object_binding");
         let returned_call_object_binding = if local_simple_async_generator_next_call {
             None
         } else if let Expression::Call { callee, arguments } = &canonical_value_expression {
@@ -2895,14 +4027,20 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             None
         };
-        let resolved_construct_object_binding = if matches!(
-            function_binding_expression,
-            Expression::Call { .. } | Expression::New { .. } | Expression::Object(_)
-        ) {
-            self.resolve_object_binding_from_expression(&function_binding_expression)
-        } else {
-            None
-        };
+        trace_timing("returned_call_object_binding");
+        let resolved_construct_object_binding =
+            if static_expression_matches(&function_binding_expression, &canonical_value_expression)
+            {
+                canonical_object_binding.clone()
+            } else if matches!(
+                function_binding_expression,
+                Expression::Call { .. } | Expression::New { .. } | Expression::Object(_)
+            ) {
+                self.resolve_object_binding_from_expression(&function_binding_expression)
+            } else {
+                None
+            };
+        trace_timing("resolved_construct_object_binding");
         let mut object_binding_expression = if canonical_object_binding
             .as_ref()
             .is_some_and(|binding| self.object_binding_is_static_map(binding))
@@ -2963,6 +4101,7 @@ impl<'a> FunctionCompiler<'a> {
                 None
             }
             .map(|binding| self.normalize_prepared_object_binding_property_keys(binding));
+        trace_timing("object_binding");
         if trace_identifier_store {
             eprintln!(
                 "identifier_store:{name}:object_binding expr={object_binding_expression:?} prepared_binding={}",
@@ -2979,7 +4118,7 @@ impl<'a> FunctionCompiler<'a> {
             .as_ref()
             .unwrap_or(&tracked_value_expression);
         let mut kind = self.infer_value_kind(metadata_value_expression);
-        if kind != Some(StaticValueKind::String)
+        if kind.is_none_or(|kind| kind == StaticValueKind::Unknown)
             && !self
                 .runtime_string_print_candidates(metadata_value_expression)
                 .is_empty()
@@ -2989,11 +4128,13 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:kind");
         }
+        trace_timing("kind");
         let static_string_value = if kind == Some(StaticValueKind::String) {
             self.resolve_static_string_value(metadata_value_expression)
         } else {
             None
         };
+        trace_timing("string");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:string");
         }
@@ -3021,12 +4162,14 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:number");
         }
+        trace_timing("number");
         let array_binding =
             if Self::expression_contains_await_for_user_call_runtime(metadata_value_expression) {
                 None
             } else {
                 self.resolve_array_binding_from_expression(metadata_value_expression)
             };
+        trace_timing("array");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:array");
         }
@@ -3066,6 +4209,7 @@ impl<'a> FunctionCompiler<'a> {
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:module");
         }
+        trace_timing("module");
         PreparedIdentifierValueStore {
             canonical_value_expression,
             tracked_value_expression,

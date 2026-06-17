@@ -214,15 +214,20 @@ impl DirectWasmCompiler {
             let candidate =
                 self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
             register_candidate(param_name, candidate.clone());
-            let global_bindings = self.snapshot_global_binding_environment();
-            let materialized_argument = self
-                .materialize_global_expression_with_state(
-                    argument,
-                    &HashMap::new(),
-                    &global_bindings.value_bindings,
-                    &global_bindings.object_bindings,
-                )
-                .unwrap_or_else(|| self.materialize_global_expression(argument));
+            let materialized_without_state = self.materialize_global_expression(argument);
+            let materialized_argument =
+                if Self::prepared_parameter_argument_is_stable(&materialized_without_state) {
+                    materialized_without_state
+                } else {
+                    let global_bindings = self.snapshot_global_binding_environment();
+                    self.materialize_global_expression_with_state(
+                        argument,
+                        &HashMap::new(),
+                        &global_bindings.value_bindings,
+                        &global_bindings.object_bindings,
+                    )
+                    .unwrap_or(materialized_without_state)
+                };
             let stable_argument =
                 Self::prepared_parameter_argument_is_stable(&materialized_argument);
             register_array_candidate(
@@ -324,15 +329,20 @@ impl DirectWasmCompiler {
         argument: &Expression,
         current_parameter_object_bindings: &HashMap<String, Option<ObjectValueBinding>>,
     ) -> Option<Expression> {
-        let global_bindings = self.snapshot_global_binding_environment();
-        let materialized_argument = self
-            .materialize_global_expression_with_state(
-                argument,
-                &HashMap::new(),
-                &global_bindings.value_bindings,
-                &global_bindings.object_bindings,
-            )
-            .unwrap_or_else(|| self.materialize_global_expression(argument));
+        let materialized_without_state = self.materialize_global_expression(argument);
+        let materialized_argument =
+            if Self::prepared_parameter_argument_is_stable(&materialized_without_state) {
+                materialized_without_state
+            } else {
+                let global_bindings = self.snapshot_global_binding_environment();
+                self.materialize_global_expression_with_state(
+                    argument,
+                    &HashMap::new(),
+                    &global_bindings.value_bindings,
+                    &global_bindings.object_bindings,
+                )
+                .unwrap_or(materialized_without_state)
+            };
         if let Some(object_binding) = self
             .infer_current_or_global_object_binding(argument, current_parameter_object_bindings)
             .or_else(|| {

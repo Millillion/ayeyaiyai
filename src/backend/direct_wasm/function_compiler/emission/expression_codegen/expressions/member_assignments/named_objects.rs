@@ -10,6 +10,18 @@ fn static_array_property_is_known_non_index(property: &Expression) -> bool {
     }
 }
 
+fn member_assignment_property_is_self_length(object: &Expression, property: &Expression) -> bool {
+    let Expression::Member {
+        object: property_object,
+        property: property_name,
+    } = property
+    else {
+        return false;
+    };
+    matches!(property_name.as_ref(), Expression::String(name) if name == "length")
+        && static_expression_matches(property_object, object)
+}
+
 fn array_binding_static_expression(binding: &ArrayValueBinding) -> Expression {
     Expression::Array(
         binding
@@ -2540,6 +2552,101 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn emit_named_array_length_append_assignment(
+        &mut self,
+        name: &str,
+        object: &Expression,
+        value: &Expression,
+    ) -> DirectResult<bool> {
+        if !self
+            .state
+            .speculation
+            .static_semantics
+            .has_local_array_binding(name)
+            && self.global_array_binding(name).is_none()
+        {
+            return Ok(false);
+        }
+
+        let emitted_value = self.member_assignment_emission_value(value);
+        let materialized = self.member_assignment_static_property_value(&emitted_value);
+        let value_local = self.allocate_temp_local();
+        self.emit_numeric_expression(&emitted_value)?;
+        self.push_local_set(value_local);
+
+        let mut append_index = None;
+        let mut updated_array_binding = None;
+        if let Some(array_binding) = self
+            .state
+            .speculation
+            .static_semantics
+            .local_array_binding_mut(name)
+        {
+            let index = array_binding.values.len() as u32;
+            array_binding.values.push(Some(materialized.clone()));
+            append_index = Some(index);
+            updated_array_binding = Some(array_binding.clone());
+            crate::backend::direct_wasm::memo::bump_static_state_generation();
+        } else if let Some(array_binding) = self
+            .backend
+            .global_semantics
+            .values
+            .array_bindings
+            .get_mut(name)
+        {
+            let index = array_binding.values.len() as u32;
+            array_binding.values.push(Some(materialized.clone()));
+            append_index = Some(index);
+            updated_array_binding = Some(array_binding.clone());
+        }
+
+        let Some(index) = append_index else {
+            return Ok(false);
+        };
+
+        if let Some(updated_array_binding) = updated_array_binding.as_ref() {
+            self.sync_internal_target_array_source_binding(name, updated_array_binding);
+            if self.binding_name_is_global(name) {
+                self.backend
+                    .sync_global_array_binding(name, Some(updated_array_binding.clone()));
+            }
+        }
+
+        self.update_tracked_array_specialized_function_value(name, index, &emitted_value)?;
+        let index_property = Expression::Number(index as f64);
+        self.initialize_member_function_assignment_capture_slots(object, &index_property, value)?;
+
+        let use_global_runtime_array = self.is_named_global_array_binding(name)
+            && (!self.state.speculation.execution_context.top_level_function
+                || self.uses_global_runtime_array_state(name));
+        if use_global_runtime_array {
+            if self.emit_global_runtime_array_slot_write_from_local(name, index, value_local)? {
+                self.state.emission.output.instructions.push(0x1a);
+            }
+        } else {
+            if self
+                .state
+                .speculation
+                .static_semantics
+                .runtime_array_length_local(name)
+                .is_some()
+                || self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .has_runtime_array_slots(name)
+            {
+                self.ensure_runtime_array_slot_entry(name, index);
+            }
+            if self.emit_runtime_array_slot_write_from_local(name, index, value_local)? {
+                self.state.emission.output.instructions.push(0x1a);
+            }
+        }
+
+        self.push_local_get(value_local);
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_named_object_member_assignment(
         &mut self,
         object: &Expression,
@@ -2938,6 +3045,14 @@ impl<'a> FunctionCompiler<'a> {
         }
         if trace_member_assignment {
             eprintln!("named_member_assignment:module_namespace:done");
+        }
+        if member_assignment_property_is_self_length(object, &static_array_property)
+            && self.emit_named_array_length_append_assignment(name, object, value)?
+        {
+            if trace_member_assignment {
+                eprintln!("named_member_assignment:self_length_append:hit");
+            }
+            return Ok(true);
         }
         if trace_member_assignment {
             eprintln!("named_member_assignment:index:start");
@@ -3346,14 +3461,20 @@ impl<'a> FunctionCompiler<'a> {
                 .scoped_shadow_string_update_value(object, &property_expression, value)
                 .unwrap_or_else(|| self.member_assignment_emission_value(value));
             let value_local = self.allocate_temp_local();
-            if self
-                .resolve_property_key_coercion_binding(property)
-                .is_some()
-            {
+            let property_coercion_binding = self.resolve_property_key_coercion_binding(property);
+            let property_has_coercion = property_coercion_binding.is_some();
+            let delay_property_coercion =
+                property_has_coercion && inline_summary_side_effect_free_expression(property);
+            if property_has_coercion && !delay_property_coercion {
                 self.emit_property_key_expression_effects(property)?;
             }
             self.emit_numeric_expression(&emitted_value)?;
             self.push_local_set(value_local);
+            if let (true, Some(binding)) =
+                (delay_property_coercion, property_coercion_binding.as_ref())
+            {
+                self.emit_delayed_property_key_coercion_binding_effects(binding)?;
+            }
             self.emit_scoped_property_store_from_local(
                 object,
                 property_name,

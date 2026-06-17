@@ -385,6 +385,106 @@ impl<'a> FunctionCompiler<'a> {
         )
     }
 
+    fn emit_simple_static_accessor_setter_assignment(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        function_binding: &LocalFunctionBinding,
+    ) -> DirectResult<bool> {
+        let materialized_property = self.canonical_object_property_expression(property);
+        if static_property_name_from_expression(&materialized_property).is_none() {
+            return Ok(false);
+        }
+        if is_private_property_name_expression(&materialized_property) {
+            return Ok(false);
+        }
+        if !inline_summary_side_effect_free_expression(property)
+            || self
+                .resolve_property_key_coercion_binding(property)
+                .is_some()
+        {
+            return Ok(false);
+        }
+        if assign_member_expression_references_internal_iterator_step(value) {
+            return Ok(false);
+        }
+
+        let Some((target_name, _)) =
+            self.simple_setter_nonlocal_assignment(function_binding, value, object)
+        else {
+            return Ok(false);
+        };
+
+        let receiver_hidden_name = self.allocate_named_hidden_local(
+            "simple_setter_receiver",
+            self.infer_value_kind(object)
+                .unwrap_or(StaticValueKind::Unknown),
+        );
+        let receiver_local = self
+            .state
+            .runtime
+            .locals
+            .get(&receiver_hidden_name)
+            .copied()
+            .expect("fresh simple setter receiver hidden local must exist");
+        let value_hidden_name = self.allocate_named_hidden_local(
+            "simple_setter_value",
+            self.infer_value_kind(value)
+                .unwrap_or(StaticValueKind::Unknown),
+        );
+        let value_local = self
+            .state
+            .runtime
+            .locals
+            .get(&value_hidden_name)
+            .copied()
+            .expect("fresh simple setter value hidden local must exist");
+
+        self.emit_numeric_expression(object)?;
+        self.push_local_set(receiver_local);
+        self.emit_numeric_expression(value)?;
+        self.push_local_set(value_local);
+
+        let receiver_snapshot_expression = match object {
+            Expression::This => {
+                self.seed_local_this_object_binding();
+                Expression::This
+            }
+            _ => object.clone(),
+        };
+        self.update_local_value_binding(&receiver_hidden_name, &receiver_snapshot_expression);
+        self.update_local_object_binding(&receiver_hidden_name, &receiver_snapshot_expression);
+        self.update_capture_slot_binding_from_expression(&value_hidden_name, value)?;
+
+        let receiver_expression = Expression::Identifier(receiver_hidden_name);
+        let value_expression = Expression::Identifier(value_hidden_name);
+        let Some((confirmed_target_name, assignment_value)) = self
+            .simple_setter_nonlocal_assignment(
+                function_binding,
+                &value_expression,
+                &receiver_expression,
+            )
+        else {
+            return Ok(false);
+        };
+        if confirmed_target_name != target_name {
+            return Ok(false);
+        }
+
+        let assignment_local = self.allocate_temp_local();
+        self.emit_numeric_expression(&assignment_value)?;
+        self.push_local_set(assignment_local);
+        self.emit_store_identifier_value_local(&target_name, &assignment_value, assignment_local)?;
+        self.sync_simple_setter_nonlocal_assignment_metadata(
+            function_binding,
+            value,
+            &receiver_expression,
+        )?;
+        self.push_local_get(value_local);
+        Ok(true)
+    }
+
     fn evaluate_simple_setter_statement_for_nonlocal_metadata(
         &self,
         statement: &Statement,
@@ -735,18 +835,36 @@ impl<'a> FunctionCompiler<'a> {
             .unwrap_or_else(|| "this".to_string());
         self.emit_runtime_object_property_shadow_copy(receiver_hidden_name, &this_owner)?;
         if let Some(updated_receiver_binding) = updated_receiver_binding.as_ref() {
-            self.sync_runtime_object_shadow_owner_static_metadata_from_binding(
+            let metadata_binding = Self::canonicalize_runtime_shadow_receiver_metadata_binding(
                 &this_owner,
                 updated_receiver_binding,
             );
+            self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                &this_owner,
+                &metadata_binding,
+            );
+            self.emit_setter_receiver_self_reference_shadow_overrides(
+                receiver_hidden_name,
+                &this_owner,
+                updated_receiver_binding,
+            )?;
         }
         if this_owner != "this" {
             self.emit_runtime_object_property_shadow_copy(receiver_hidden_name, "this")?;
             if let Some(updated_receiver_binding) = updated_receiver_binding.as_ref() {
-                self.sync_runtime_object_shadow_owner_static_metadata_from_binding(
+                let metadata_binding = Self::canonicalize_runtime_shadow_receiver_metadata_binding(
                     "this",
                     updated_receiver_binding,
                 );
+                self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                    "this",
+                    &metadata_binding,
+                );
+                self.emit_setter_receiver_self_reference_shadow_overrides(
+                    receiver_hidden_name,
+                    "this",
+                    updated_receiver_binding,
+                )?;
             }
         }
         Ok(())
@@ -764,19 +882,76 @@ impl<'a> FunctionCompiler<'a> {
             .unwrap_or_else(|| identifier_name.to_string());
         self.emit_runtime_object_property_shadow_copy(receiver_hidden_name, &identifier_owner)?;
         if let Some(updated_receiver_binding) = updated_receiver_binding.as_ref() {
-            self.sync_runtime_object_shadow_owner_static_metadata_from_binding(
+            let metadata_binding = Self::canonicalize_runtime_shadow_receiver_metadata_binding(
                 &identifier_owner,
                 updated_receiver_binding,
             );
+            self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                &identifier_owner,
+                &metadata_binding,
+            );
+            self.emit_setter_receiver_self_reference_shadow_overrides(
+                receiver_hidden_name,
+                &identifier_owner,
+                updated_receiver_binding,
+            )?;
         }
         if identifier_owner != identifier_name {
             self.emit_runtime_object_property_shadow_copy(receiver_hidden_name, identifier_name)?;
             if let Some(updated_receiver_binding) = updated_receiver_binding.as_ref() {
-                self.sync_runtime_object_shadow_owner_static_metadata_from_binding(
+                let metadata_binding = Self::canonicalize_runtime_shadow_receiver_metadata_binding(
                     identifier_name,
                     updated_receiver_binding,
                 );
+                self.sync_runtime_object_property_shadow_static_metadata_from_binding(
+                    identifier_name,
+                    &metadata_binding,
+                );
+                self.emit_setter_receiver_self_reference_shadow_overrides(
+                    receiver_hidden_name,
+                    identifier_name,
+                    updated_receiver_binding,
+                )?;
             }
+        }
+        Ok(())
+    }
+
+    fn emit_setter_receiver_self_reference_shadow_overrides(
+        &mut self,
+        receiver_hidden_name: &str,
+        target_owner: &str,
+        object_binding: &ObjectValueBinding,
+    ) -> DirectResult<()> {
+        let receiver_local = self.state.runtime.locals.get(receiver_hidden_name).copied();
+        for (property, value) in self.object_runtime_shadow_entries_from_binding(object_binding) {
+            if !Self::runtime_shadow_receiver_value_references_owner(
+                &value,
+                target_owner,
+                &property,
+            ) {
+                continue;
+            }
+            let target_binding =
+                self.runtime_object_property_shadow_binding_by_property(target_owner, &property);
+            let target_deleted = self.runtime_object_property_shadow_deleted_binding_by_property(
+                target_owner,
+                &property,
+            );
+            self.push_i32_const(JS_UNDEFINED_TAG);
+            self.push_global_set(target_deleted.value_index);
+            self.push_i32_const(0);
+            self.push_global_set(target_deleted.present_index);
+            if let Some(receiver_local) = receiver_local {
+                self.push_local_get(receiver_local);
+            } else {
+                self.emit_numeric_expression(&Expression::Identifier(
+                    receiver_hidden_name.to_string(),
+                ))?;
+            }
+            self.push_global_set(target_binding.value_index);
+            self.push_i32_const(1);
+            self.push_global_set(target_binding.present_index);
         }
         Ok(())
     }
@@ -925,6 +1100,15 @@ impl<'a> FunctionCompiler<'a> {
         let Some(function_binding) = self.resolve_member_setter_binding(object, property) else {
             return Ok(false);
         };
+
+        if self.emit_simple_static_accessor_setter_assignment(
+            object,
+            property,
+            value,
+            &function_binding,
+        )? {
+            return Ok(true);
+        }
 
         let receiver_hidden_name = self.allocate_named_hidden_local(
             "setter_receiver",

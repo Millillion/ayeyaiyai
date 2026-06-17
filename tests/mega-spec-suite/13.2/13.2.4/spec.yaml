@@ -1,0 +1,11 @@
+subclause: "13.2.4"
+title: Array Initializer
+url: https://262.ecma-international.org/16.0/#sec-array-initializer
+behaviors:
+  - array-literal-accepts-syntax-forms
+
+behavior_descriptions:
+  array-literal-accepts-syntax-forms: |
+    ArrayLiteral accepts empty arrays, elisions, element lists, spread
+    elements, trailing commas, and Yield/Await parameterized element forms in
+    the syntactic positions allowed by the grammar.

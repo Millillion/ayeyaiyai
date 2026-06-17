@@ -14,6 +14,16 @@ pub enum ArrayElement {
     Spread(Expression),
 }
 
+pub const ARRAY_ELISION_SENTINEL: &str = "__ayy$array$elision";
+
+pub fn array_elision_expression() -> Expression {
+    Expression::Identifier(ARRAY_ELISION_SENTINEL.to_string())
+}
+
+pub fn expression_is_array_elision(expression: &Expression) -> bool {
+    matches!(expression, Expression::Identifier(name) if name == ARRAY_ELISION_SENTINEL)
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum CallArgument {
     Expression(Expression),

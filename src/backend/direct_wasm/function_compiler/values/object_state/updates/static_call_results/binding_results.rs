@@ -253,15 +253,6 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return None;
             }
-            if !(user_function
-                .inline_summary
-                .as_ref()
-                .is_some_and(|summary| summary.effects.is_empty())
-                || self
-                    .user_function_has_explicit_call_frame_inlineable_terminal_body(user_function))
-            {
-                return None;
-            }
 
             let expanded_arguments = self.expand_call_arguments(arguments);
             let raw_this_expression = expanded_arguments
@@ -284,6 +275,26 @@ impl<'a> FunctionCompiler<'a> {
                         })
                         .collect::<Vec<_>>()
                 };
+            if self.user_function_is_simple_return_this_call_target(user_function) {
+                let this_binding = if self
+                    .should_box_sloppy_function_this(user_function, &raw_this_expression)
+                {
+                    self.static_sloppy_function_this_binding(user_function, &raw_this_expression)
+                        .unwrap_or(Expression::This)
+                } else {
+                    self.materialize_static_expression(&raw_this_expression)
+                };
+                return Some((this_binding, Some(function_name.clone())));
+            }
+            if !(user_function
+                .inline_summary
+                .as_ref()
+                .is_some_and(|summary| summary.effects.is_empty())
+                || self
+                    .user_function_has_explicit_call_frame_inlineable_terminal_body(user_function))
+            {
+                return None;
+            }
             let this_binding =
                 if self.should_box_sloppy_function_this(user_function, &raw_this_expression) {
                     Expression::This

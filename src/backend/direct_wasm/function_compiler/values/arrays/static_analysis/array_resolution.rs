@@ -1,3 +1,5 @@
+use crate::ir::hir::expression_is_array_elision;
+
 use super::*;
 
 thread_local! {
@@ -1045,11 +1047,20 @@ impl<'a> FunctionCompiler<'a> {
                 for element in elements {
                     match element {
                         crate::ir::hir::ArrayElement::Expression(expression) => {
-                            values.push(Some(self.materialize_static_expression(expression)));
+                            if expression_is_array_elision(expression) {
+                                values.push(None);
+                            } else {
+                                values.push(Some(self.materialize_static_expression(expression)));
+                            }
                         }
                         crate::ir::hir::ArrayElement::Spread(expression) => {
                             if let Some(binding) = self.resolve_array_spread_binding(expression) {
-                                values.extend(binding.values);
+                                values.extend(
+                                    binding
+                                        .values
+                                        .into_iter()
+                                        .map(|value| Some(value.unwrap_or(Expression::Undefined))),
+                                );
                             } else {
                                 values.push(Some(self.materialize_static_expression(expression)));
                             }

@@ -1486,19 +1486,32 @@ impl DirectWasmCompiler {
         let mut next_global_index = self.next_allocated_global_index();
 
         for function in functions {
-            if !function.register_global {
+            if function.register_global {
+                self.ensure_global_binding_index(&function.name, &mut next_global_index);
+                self.set_global_user_function_reference(&function.name);
+                self.upsert_global_data_property_descriptor(
+                    &function.name,
+                    Expression::Identifier(function.name.clone()),
+                    Some(true),
+                    true,
+                    false,
+                );
                 continue;
             }
 
-            self.ensure_global_binding_index(&function.name, &mut next_global_index);
-            self.set_global_user_function_reference(&function.name);
-            self.upsert_global_data_property_descriptor(
-                &function.name,
-                Expression::Identifier(function.name.clone()),
-                Some(true),
-                true,
-                false,
-            );
+            if let Some(binding_name) = function.top_level_binding.as_deref() {
+                self.ensure_global_binding_index(binding_name, &mut next_global_index);
+                self.mark_global_lexical_binding(binding_name, true, &mut next_global_index);
+                self.set_global_binding_kind(binding_name, StaticValueKind::Function);
+                self.set_global_expression_binding(
+                    binding_name,
+                    Expression::Identifier(function.name.clone()),
+                );
+                self.sync_global_function_binding(
+                    binding_name,
+                    Some(LocalFunctionBinding::User(function.name.clone())),
+                );
+            }
         }
     }
 

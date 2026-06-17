@@ -382,6 +382,7 @@ impl Lowerer {
                 lowered?
             }
             SwcProgram::Module(module) => {
+                self.push_this_replacement(Some(Expression::Undefined));
                 for item in &module.body {
                     match item {
                         ModuleItem::Stmt(statement) => {
@@ -392,6 +393,7 @@ impl Lowerer {
                         }
                     }
                 }
+                self.pop_this_replacement();
             }
         }
 

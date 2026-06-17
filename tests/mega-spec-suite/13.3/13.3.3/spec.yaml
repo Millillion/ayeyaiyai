@@ -1,0 +1,16 @@
+subclause: "13.3.3"
+title: EvaluatePropertyAccessWithExpressionKey
+url: https://262.ecma-international.org/16.0/#sec-evaluate-property-access-with-expression-key
+behaviors:
+  - expression-key-topropertykey-for-read
+  - computed-assignment-delays-topropertykey
+
+behavior_descriptions:
+  expression-key-topropertykey-for-read: |
+    Bracket reads evaluate the expression key, get its value, apply
+    ToPropertyKey before the read, and use the resulting property key.
+
+  computed-assignment-delays-topropertykey: |
+    In a computed assignment such as a[b] = c, the property expression is
+    evaluated before the right-hand side, but ToPropertyKey for the reference
+    is delayed until after the right-hand side is evaluated.

@@ -1833,6 +1833,51 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<ObjectValueBinding> {
+        let call_expression = Expression::Call {
+            callee: Box::new(callee.clone()),
+            arguments: arguments.to_vec(),
+        };
+        let key = if crate::backend::direct_wasm::memo::memo_context_is_cacheable() {
+            crate::backend::direct_wasm::memo::object_binding_cache_key(
+                &call_expression,
+                self.current_function_name(),
+            )
+        } else {
+            None
+        };
+        let Some(key) = key else {
+            return self.resolve_returned_object_binding_from_call_uncached(callee, arguments);
+        };
+        if let Some(cached) = crate::backend::direct_wasm::memo::lookup_object_binding(key) {
+            if crate::backend::direct_wasm::memo::memo_verify_enabled() {
+                let verify_token = crate::backend::direct_wasm::memo::MemoStoreToken::capture();
+                let fresh =
+                    self.resolve_returned_object_binding_from_call_uncached(callee, arguments);
+                if verify_token.is_clean()
+                    && !crate::backend::direct_wasm::memo::verify_object_bindings_match(
+                        &fresh, &cached,
+                    )
+                {
+                    panic!(
+                        "AYY_MEMO_VERIFY divergence: returned object binding for {call_expression:?}"
+                    );
+                }
+            }
+            return cached;
+        }
+        let token = crate::backend::direct_wasm::memo::MemoStoreToken::capture();
+        let result = self.resolve_returned_object_binding_from_call_uncached(callee, arguments);
+        if token.is_clean() {
+            crate::backend::direct_wasm::memo::store_object_binding(key, result.clone());
+        }
+        result
+    }
+
+    fn resolve_returned_object_binding_from_call_uncached(
+        &self,
+        callee: &Expression,
+        arguments: &[CallArgument],
+    ) -> Option<ObjectValueBinding> {
         let trace_inherited_bindings = crate::ayy_env_flag!("AYY_TRACE_INHERITED_BINDINGS");
         if trace_inherited_bindings {
             eprintln!(
@@ -1999,6 +2044,18 @@ impl<'a> FunctionCompiler<'a> {
         callee: &Expression,
         arguments: &[CallArgument],
     ) -> Option<LocalFunctionBinding> {
+        if let Expression::Member { object, property } = callee
+            && matches!(property.as_ref(), Expression::String(name) if name == "call")
+            && self
+                .resolve_function_binding_from_expression(object)
+                .is_some()
+        {
+            return self.resolve_returned_function_binding_from_call(
+                object,
+                arguments.get(1..).unwrap_or_default(),
+            );
+        }
+
         let LocalFunctionBinding::User(function_name) =
             self.resolve_function_binding_from_expression(callee)?
         else {
@@ -2114,6 +2171,20 @@ impl<'a> FunctionCompiler<'a> {
             return Some(object_binding);
         }
         let user_function = self.user_function(function_name)?;
+        if let Some(object_binding) = self
+            .resolve_simple_return_object_literal_binding_from_user_function_call(
+                function_name,
+                user_function,
+                arguments,
+            )
+        {
+            if trace_inherited_bindings {
+                eprintln!(
+                    "resolve_static_returned_object_binding_from_user_function_call:simple_return_object",
+                );
+            }
+            return Some(object_binding);
+        }
         let mut execution = self.prepare_static_user_function_execution(
             function_name,
             user_function,
@@ -2227,6 +2298,61 @@ impl<'a> FunctionCompiler<'a> {
                 ),
             )
         })?
+    }
+
+    fn resolve_simple_return_object_literal_binding_from_user_function_call(
+        &self,
+        function_name: &str,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> Option<ObjectValueBinding> {
+        if user_function.kind != FunctionKind::Ordinary
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || self.user_function_uses_direct_arguments_object(user_function)
+            || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+            || arguments
+                .iter()
+                .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return None;
+        }
+        let function = self.resolve_registered_function_declaration(function_name)?;
+        if function
+            .params
+            .iter()
+            .any(|param| param.default.is_some() || param.rest || param.name == "arguments")
+        {
+            return None;
+        }
+        let [Statement::Return(Expression::Object(entries))] = function.body.as_slice() else {
+            return None;
+        };
+        if entries.iter().any(|entry| {
+            matches!(
+                entry,
+                ObjectEntry::Getter { .. } | ObjectEntry::Setter { .. }
+            )
+        }) {
+            return None;
+        }
+        let returned_expression = Expression::Object(entries.clone());
+        let returned_expression = self.substitute_user_function_argument_bindings(
+            &returned_expression,
+            user_function,
+            arguments,
+        );
+        let Expression::Object(returned_entries) = returned_expression else {
+            return None;
+        };
+        self.resolve_materialized_object_literal_binding(&returned_entries)
+            .map(|object_binding| {
+                self.normalize_returned_object_binding_from_return_shape(
+                    object_binding,
+                    function_name,
+                )
+            })
     }
 
     pub(in crate::backend::direct_wasm) fn resolve_static_returned_descriptor_binding_from_user_function_call(

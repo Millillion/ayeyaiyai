@@ -1,0 +1,11 @@
+subclause: "13.2.5.4"
+title: "Runtime Semantics: Evaluation"
+url: https://262.ecma-international.org/16.0/#sec-object-initializer-runtime-semantics-evaluation
+behaviors:
+  - object-literal-creates-ordinary-objects
+
+behavior_descriptions:
+  object-literal-creates-ordinary-objects: |
+    ObjectLiteral evaluation creates a new ordinary object with Object.prototype
+    before evaluating the property definition list, and each evaluation returns
+    a fresh object.

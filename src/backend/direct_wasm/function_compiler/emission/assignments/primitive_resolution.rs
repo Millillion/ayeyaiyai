@@ -215,6 +215,11 @@ impl<'a> FunctionCompiler<'a> {
                 if reads_runtime_array_member {
                     return None;
                 }
+                if matches!(&materialized_property, Expression::String(name) if name == "length")
+                    && let Expression::String(text) = self.materialize_static_expression(object)
+                {
+                    return Some(Expression::Number(text.encode_utf16().count() as f64));
+                }
                 if let Some(function_name) = self.resolve_function_name_value(object, property) {
                     if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS") {
                         eprintln!(
@@ -275,6 +280,16 @@ impl<'a> FunctionCompiler<'a> {
                                 .flatten()
                         });
                 if let Some(object_binding) = object_binding {
+                    if object_binding_lookup_descriptor(&object_binding, &materialized_property)
+                        .is_some_and(|descriptor| {
+                            descriptor.has_get
+                                || descriptor.has_set
+                                || descriptor.getter.is_some()
+                                || descriptor.setter.is_some()
+                        })
+                    {
+                        return None;
+                    }
                     if let Some(value) = self.resolve_object_binding_property_value(
                         &object_binding,
                         &materialized_property,

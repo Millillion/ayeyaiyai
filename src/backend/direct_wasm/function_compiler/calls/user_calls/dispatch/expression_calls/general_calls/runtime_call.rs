@@ -1,6 +1,33 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn emit_static_runtime_call_argument_if_resolved(
+        &mut self,
+        argument: &Expression,
+    ) -> DirectResult<bool> {
+        if Self::expression_contains_assignment_or_update(argument)
+            || Self::expression_contains_call_or_construct(argument)
+        {
+            return Ok(false);
+        }
+        if let Some(value) = self.resolve_fast_static_boolean_expression(argument, 0) {
+            self.emit_literal_expression(&Expression::Bool(value))?;
+            return Ok(true);
+        }
+        if let Some(value) = self.resolve_fast_static_number_expression(argument, 0) {
+            self.emit_literal_expression(&Expression::Number(value))?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    fn emit_runtime_call_argument_expression(&mut self, argument: &Expression) -> DirectResult<()> {
+        if self.emit_static_runtime_call_argument_if_resolved(argument)? {
+            return Ok(());
+        }
+        self.emit_numeric_expression(argument)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_user_function_runtime_call_from_expanded_arguments(
         &mut self,
         user_function: &UserFunction,
@@ -75,7 +102,7 @@ impl<'a> FunctionCompiler<'a> {
                         user_function.name, argument_index, argument_local
                     );
                 }
-                self.emit_numeric_expression(argument)?;
+                self.emit_runtime_call_argument_expression(argument)?;
                 if trace_user_calls {
                     eprintln!(
                         "runtime_call:emit_arg_done target={} index={}",
@@ -91,7 +118,7 @@ impl<'a> FunctionCompiler<'a> {
                         user_function.name, argument_index
                     );
                 }
-                self.emit_numeric_expression(argument)?;
+                self.emit_runtime_call_argument_expression(argument)?;
                 if trace_user_calls {
                     eprintln!(
                         "runtime_call:emit_ignored_arg_done target={} index={}",

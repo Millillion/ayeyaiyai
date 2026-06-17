@@ -68,7 +68,7 @@ pub(in crate::backend::direct_wasm) fn materialize_literal_string_member(
         );
     }
     if matches!(property, Expression::String(name) if name == "length") {
-        return Some(Expression::Number(text.chars().count() as f64));
+        return Some(Expression::Number(text.encode_utf16().count() as f64));
     }
     None
 }

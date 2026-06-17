@@ -5,7 +5,8 @@ mod program;
 mod statement;
 
 pub use common::{
-    ArrayElement, BinaryOp, CallArgument, ObjectEntry, SwitchCase, UnaryOp, UpdateOp,
+    ARRAY_ELISION_SENTINEL, ArrayElement, BinaryOp, CallArgument, ObjectEntry, SwitchCase, UnaryOp,
+    UpdateOp, array_elision_expression, expression_is_array_elision,
 };
 pub use expression::{Expression, js_string_utf16_code_units, js_surrogate_code_unit_to_sentinel};
 pub use function::{FunctionDeclaration, FunctionKind, Parameter, SPREAD_ITERATE_HELPER_NAME};

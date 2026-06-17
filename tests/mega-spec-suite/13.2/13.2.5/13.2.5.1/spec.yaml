@@ -1,0 +1,11 @@
+subclause: "13.2.5.1"
+title: "Static Semantics: Early Errors"
+url: https://262.ecma-international.org/16.0/#sec-object-initializer-static-semantics-early-errors
+behaviors:
+  - duplicate-literal-proto-setters-are-early-errors
+
+behavior_descriptions:
+  duplicate-literal-proto-setters-are-early-errors: |
+    An actual object initializer is an early error when its PropertyNameList
+    contains duplicate "__proto__" entries and at least two of those entries
+    came from literal PropertyName : AssignmentExpression definitions.

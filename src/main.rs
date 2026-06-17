@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
 
-use ayeyaiyai::{CompileOptions, compile_file, compile_unmodified_file_with_goal_and_strict};
+use ayeyaiyai::{
+    CompileOptions, compile_file_with_goal_and_strict, compile_unmodified_file_with_goal_and_strict,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -66,5 +68,5 @@ fn run() -> Result<()> {
             cli.force_strict,
         );
     }
-    compile_file(&cli.input, &options)
+    compile_file_with_goal_and_strict(&cli.input, &options, cli.module, cli.force_strict)
 }

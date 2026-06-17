@@ -660,6 +660,210 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn emit_assign_member_with_delayed_property_key_coercion(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        resolved: &ResolvedPropertyKey,
+    ) -> DirectResult<()> {
+        self.emit_numeric_expression(property)?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        let value_temp_name =
+            self.allocate_named_hidden_local("member_assignment_value", StaticValueKind::Unknown);
+        let value_local = self
+            .state
+            .runtime
+            .locals
+            .get(&value_temp_name)
+            .copied()
+            .expect("allocated hidden assignment value local");
+        self.emit_numeric_expression(value)?;
+        self.push_local_set(value_local);
+        self.emit_store_identifier_value_local(&value_temp_name, value, value_local)?;
+
+        if let Some(binding) = resolved.coercion.as_ref() {
+            self.emit_delayed_property_key_coercion_binding_effects(binding)?;
+        }
+
+        let value_temp = Expression::Identifier(value_temp_name);
+        self.emit_assign_member_expression(object, &resolved.key, &value_temp)
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_materialized_effectful_member_base_object(
+        &self,
+        object: &Expression,
+    ) -> Option<Expression> {
+        let materialized_object = self.materialize_static_expression(object);
+        if !static_expression_matches(&materialized_object, object)
+            && self
+                .resolve_object_binding_from_expression(&materialized_object)
+                .is_some()
+        {
+            return Some(materialized_object);
+        }
+
+        if matches!(object, Expression::Member { .. })
+            && let Some(value) = self.snapshot_effectful_member_read_for_static_store(object)
+        {
+            let materialized_value = self.materialize_static_expression(&value);
+            let candidate = if static_expression_matches(&materialized_value, &value) {
+                value
+            } else {
+                materialized_value
+            };
+            if self
+                .resolve_object_binding_from_expression(&candidate)
+                .is_some()
+            {
+                return Some(candidate);
+            }
+        }
+
+        let Expression::Call { callee, arguments } = object else {
+            return None;
+        };
+        let argument_expressions = arguments
+            .iter()
+            .map(|argument| match argument {
+                CallArgument::Expression(expression) => Some(expression.clone()),
+                CallArgument::Spread(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let binding = self.resolve_function_binding_from_expression(callee)?;
+        let StaticEvalOutcome::Value(return_value) =
+            self.resolve_terminal_function_outcome_from_binding(&binding, &argument_expressions)?
+        else {
+            return None;
+        };
+        let materialized_return = self.materialize_static_expression(&return_value);
+        let candidate = if static_expression_matches(&materialized_return, &return_value) {
+            return_value
+        } else {
+            materialized_return
+        };
+        self.resolve_object_binding_from_expression(&candidate)
+            .is_some()
+            .then_some(candidate)
+    }
+
+    fn emit_materialized_effectful_object_member_assignment(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+        value: &Expression,
+        materialized_property: &Expression,
+    ) -> DirectResult<bool> {
+        if inline_summary_side_effect_free_expression(object) {
+            return Ok(false);
+        }
+
+        let Some(materialized_object) =
+            self.resolve_materialized_effectful_member_base_object(object)
+        else {
+            return Ok(false);
+        };
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
+            eprintln!(
+                "member_assignment:materialized_effectful_object:resolved object={materialized_object:?}"
+            );
+        }
+
+        let resolved_property = self
+            .resolve_property_key_expression_with_coercion(property)
+            .unwrap_or_else(|| ResolvedPropertyKey {
+                key: materialized_property.clone(),
+                coercion: None,
+            });
+        let resolved_property_key =
+            self.canonical_object_property_expression(&resolved_property.key);
+        if crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT") {
+            eprintln!(
+                "member_assignment:materialized_effectful_object:resolved property={resolved_property_key:?}"
+            );
+        }
+        let Some(property_name) = static_property_name_from_expression(&resolved_property_key)
+        else {
+            return Ok(false);
+        };
+
+        self.emit_numeric_expression(object)?;
+        self.state.emission.output.instructions.push(0x1a);
+        self.emit_numeric_expression(property)?;
+        self.state.emission.output.instructions.push(0x1a);
+
+        let emitted_value = self.member_assignment_emission_value(value);
+        let value_local = self.allocate_temp_local();
+        self.emit_numeric_expression(&emitted_value)?;
+        self.push_local_set(value_local);
+
+        if let Some(binding) = resolved_property.coercion.as_ref() {
+            self.emit_delayed_property_key_coercion_binding_effects(binding)?;
+        }
+
+        self.emit_scoped_property_store_from_local(
+            &materialized_object,
+            &property_name,
+            value_local,
+            &emitted_value,
+        )?;
+        Ok(true)
+    }
+
+    fn resolve_assign_member_delayed_property_key(
+        &self,
+        property: &Expression,
+    ) -> Option<ResolvedPropertyKey> {
+        if let Some(resolved) = self.resolve_property_key_expression_with_coercion(property)
+            && resolved.coercion.is_some()
+            && !static_expression_matches(&resolved.key, property)
+        {
+            return Some(resolved);
+        }
+
+        let Expression::Binary { op, left, right } = property else {
+            return None;
+        };
+        let selected = match op {
+            BinaryOp::LogicalAnd => {
+                if self.logical_operand_static_truthiness_after_evaluation(left)? {
+                    right.as_ref()
+                } else {
+                    left.as_ref()
+                }
+            }
+            BinaryOp::LogicalOr => {
+                if self.logical_operand_static_truthiness_after_evaluation(left)? {
+                    left.as_ref()
+                } else {
+                    right.as_ref()
+                }
+            }
+            BinaryOp::NullishCoalescing => {
+                let left_value = self
+                    .resolve_static_primitive_expression_with_context(
+                        left,
+                        self.current_function_name(),
+                    )
+                    .or_else(|| {
+                        let materialized = self.materialize_static_expression(left);
+                        (!static_expression_matches(&materialized, left)).then_some(materialized)
+                    })?;
+                if matches!(left_value, Expression::Null | Expression::Undefined) {
+                    right.as_ref()
+                } else {
+                    left.as_ref()
+                }
+            }
+            _ => return None,
+        };
+
+        let resolved = self.resolve_property_key_expression_with_coercion(selected)?;
+        (resolved.coercion.is_some() && !static_expression_matches(&resolved.key, selected))
+            .then_some(resolved)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_assign_member_expression(
         &mut self,
         object: &Expression,
@@ -697,6 +901,14 @@ impl<'a> FunctionCompiler<'a> {
             let substituted_value =
                 substitute_member_property_key(value, object, property, &resolved_key);
             return self.emit_assign_member_expression(object, &resolved_key, &substituted_value);
+        }
+        if inline_summary_side_effect_free_expression(object)
+            && !inline_summary_side_effect_free_expression(property)
+            && let Some(resolved) = self.resolve_assign_member_delayed_property_key(property)
+        {
+            return self.emit_assign_member_with_delayed_property_key_coercion(
+                object, property, value, &resolved,
+            );
         }
         let trace_member_assignment = crate::ayy_env_flag!("AYY_TRACE_MEMBER_ASSIGNMENT");
         if trace_member_assignment {
@@ -935,14 +1147,20 @@ impl<'a> FunctionCompiler<'a> {
         {
             let emitted_value = self.member_assignment_emission_value(value);
             let value_local = self.allocate_temp_local();
-            if self
-                .resolve_property_key_coercion_binding(property)
-                .is_some()
-            {
+            let property_coercion_binding = self.resolve_property_key_coercion_binding(property);
+            let property_has_coercion = property_coercion_binding.is_some();
+            let delay_property_coercion =
+                property_has_coercion && inline_summary_side_effect_free_expression(property);
+            if property_has_coercion && !delay_property_coercion {
                 self.emit_property_key_expression_effects(property)?;
             }
             self.emit_numeric_expression(&emitted_value)?;
             self.push_local_set(value_local);
+            if let (true, Some(binding)) =
+                (delay_property_coercion, property_coercion_binding.as_ref())
+            {
+                self.emit_delayed_property_key_coercion_binding_effects(binding)?;
+            }
             self.emit_scoped_property_store_from_local(
                 object,
                 property_name,
@@ -981,6 +1199,18 @@ impl<'a> FunctionCompiler<'a> {
             {
                 return Ok(());
             }
+        }
+
+        if self.emit_materialized_effectful_object_member_assignment(
+            object,
+            property,
+            value,
+            &materialized_property,
+        )? {
+            if trace_member_assignment {
+                eprintln!("member_assignment:materialized_effectful_object:hit");
+            }
+            return Ok(());
         }
 
         if self.emit_template_object_frozen_absent_member_assignment(object, property, value)? {

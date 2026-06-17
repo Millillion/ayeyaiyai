@@ -1,0 +1,27 @@
+subclause: "13.2.4.1"
+title: "Runtime Semantics: ArrayAccumulation"
+url: https://262.ecma-international.org/16.0/#sec-runtime-semantics-arrayaccumulation
+behaviors:
+  - elisions-advance-index-with-holes
+  - assignment-elements-create-index-properties
+  - elements-evaluate-left-to-right
+  - spread-elements-append-iterator-values
+
+behavior_descriptions:
+  elisions-advance-index-with-holes: |
+    Elision advances the next array index and updates length without creating
+    data properties for the skipped elements.
+
+  assignment-elements-create-index-properties: |
+    AssignmentExpression elements are evaluated, GetValue is applied, and a
+    data property is created at the current array index before the next index
+    advances.
+
+  elements-evaluate-left-to-right: |
+    ElementList accumulation evaluates earlier elements, elisions, and spread
+    elements before later elements, preserving the observable evaluation order.
+
+  spread-elements-append-iterator-values: |
+    SpreadElement gets an iterator from the spread value, appends each
+    IteratorStepValue result as a data property, and advances the array index
+    for each value.

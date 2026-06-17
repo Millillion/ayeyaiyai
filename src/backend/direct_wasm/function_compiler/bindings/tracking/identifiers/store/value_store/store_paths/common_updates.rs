@@ -362,6 +362,42 @@ impl<'a> FunctionCompiler<'a> {
         None
     }
 
+    fn call_snapshot_capture_source_expression_for_local_store(
+        &self,
+        state: &PreparedIdentifierStoreState,
+        capture_name: &str,
+    ) -> Option<Expression> {
+        let source_expression = state.call_source_snapshot_expression.as_ref()?;
+        let snapshot = self
+            .state
+            .speculation
+            .static_semantics
+            .last_bound_user_function_call
+            .as_ref()?;
+        let snapshot_source = snapshot.source_expression.as_ref()?;
+        if !static_expression_matches(snapshot_source, source_expression) {
+            return None;
+        }
+        let result_binding = snapshot.result_expression.as_ref().and_then(|result| {
+            self.resolve_function_binding_from_expression_with_context(
+                result,
+                Some(snapshot.function_name.as_str()),
+            )
+            .or_else(|| self.resolve_function_binding_from_expression(result))
+        });
+        if result_binding.as_ref() != state.function_binding.as_ref() {
+            return None;
+        }
+        snapshot
+            .updated_bindings
+            .get(capture_name)
+            .or_else(|| {
+                scoped_binding_source_name(capture_name)
+                    .and_then(|source_name| snapshot.updated_bindings.get(source_name))
+            })
+            .cloned()
+    }
+
     fn preserve_identifier_function_capture_slots_for_local_store(
         &mut self,
         state: &PreparedIdentifierStoreState,
@@ -415,10 +451,14 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
             let Some((source_expression, source_is_runtime_local)) = self
-                .identifier_store_capture_source_expression_for_local_value(
-                    capture_name,
-                    force_runtime_slot,
-                )
+                .call_snapshot_capture_source_expression_for_local_store(state, capture_name)
+                .map(|source| (source, true))
+                .or_else(|| {
+                    self.identifier_store_capture_source_expression_for_local_value(
+                        capture_name,
+                        force_runtime_slot,
+                    )
+                })
             else {
                 continue;
             };
@@ -1287,10 +1327,50 @@ impl<'a> FunctionCompiler<'a> {
         fallback_owner: &str,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        let trace_runtime_shadow_timing = crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOW_TIMING");
+        let timing_start = trace_runtime_shadow_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_timing_step = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "runtime_shadow_timing name={target_name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         if state.is_internal_array_step_binding {
             return Ok(());
         }
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
+        let static_object_properties_seeded_by_initializer = matches!(
+            &state.tracked_value_expression,
+            Expression::Object(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
+        ) || matches!(
+            &state.canonical_value_expression,
+            Expression::Object(entries)
+                if Self::object_literal_entries_can_seed_runtime_property_values(entries)
+        );
+        if (state.runtime_object_properties_seeded_by_initializer
+            || static_object_properties_seeded_by_initializer)
+            && target_name == fallback_owner
+            && state.resolved_local_binding.is_none()
+            && state_stores_plain_static_ordinary_object(state)
+        {
+            trace_timing_step("skipped_seeded_plain_static_object");
+            if trace_identifier_store {
+                eprintln!(
+                    "identifier_store:{target_name}:runtime_shadows skipped_seeded_plain_static_object"
+                );
+            }
+            return Ok(());
+        }
+        trace_timing_step("seeded_plain_static_check");
         {
             // Self-referential stores (for example `x += 1` on a binding
             // without static metadata keeps `x` inside its own stored value
@@ -1316,6 +1396,7 @@ impl<'a> FunctionCompiler<'a> {
                         && source_owner != fallback_owner
                 });
             if has_self_reference && self_reference_member_source_owner.is_none() {
+                trace_timing_step("skipped_self_reference");
                 if trace_identifier_store {
                     eprintln!(
                         "identifier_store:{target_name}:runtime_shadows skipped_self_reference"
@@ -1331,6 +1412,7 @@ impl<'a> FunctionCompiler<'a> {
                 );
             }
         }
+        trace_timing_step("self_reference_check");
         if Self::expression_contains_await_for_user_call_runtime(&state.canonical_value_expression)
             || Self::expression_contains_await_for_user_call_runtime(
                 &state.tracked_value_expression,
@@ -1347,11 +1429,13 @@ impl<'a> FunctionCompiler<'a> {
                 .unwrap_or_else(|| fallback_owner.to_string());
             self.clear_runtime_object_property_shadow_prefix(&target_owner);
             self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+            trace_timing_step("skipped_await_runtime");
             if trace_identifier_store {
                 eprintln!("identifier_store:{target_name}:runtime_shadows skipped_await_runtime");
             }
             return Ok(());
         }
+        trace_timing_step("await_check");
         if expression_is_static_promise_with_resolvers_record(&state.canonical_value_expression)
             || expression_is_static_promise_with_resolvers_record(&state.tracked_value_expression)
             || expression_is_static_promise_with_resolvers_record(
@@ -1363,6 +1447,7 @@ impl<'a> FunctionCompiler<'a> {
                 .as_ref()
                 .is_some_and(object_binding_is_static_promise_with_resolvers_record)
         {
+            trace_timing_step("skipped_promise_with_resolvers");
             if trace_identifier_store {
                 eprintln!(
                     "identifier_store:{target_name}:runtime_shadows skipped_promise_with_resolvers"
@@ -1370,21 +1455,25 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("promise_record_check");
         if expression_is_function_prototype_bind_call(&state.canonical_value_expression)
             || expression_is_function_prototype_bind_call(&state.tracked_value_expression)
             || expression_is_function_prototype_bind_call(&state.module_assignment_expression)
             || expression_is_function_prototype_bind_call(&state.object_binding_expression)
         {
+            trace_timing_step("skipped_bind_call");
             if trace_identifier_store {
                 eprintln!("identifier_store:{target_name}:runtime_shadows skipped_bind_call");
             }
             return Ok(());
         }
+        trace_timing_step("bind_call_check");
         if matches!(
             state.function_binding.as_ref(),
             Some(LocalFunctionBinding::Builtin(function_name))
                 if parse_bound_function_prototype_call_builtin_name(function_name).is_some()
         ) {
+            trace_timing_step("skipped_bound_call_builtin");
             if trace_identifier_store {
                 eprintln!(
                     "identifier_store:{target_name}:runtime_shadows skipped_bound_call_builtin"
@@ -1392,6 +1481,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("bound_builtin_check");
         let self_referential_member_source_owner = {
             let mut referenced_names = HashSet::new();
             collect_referenced_binding_names_from_expression(
@@ -1410,12 +1500,14 @@ impl<'a> FunctionCompiler<'a> {
                     && source_owner != fallback_owner
             })
         };
+        trace_timing_step("self_referential_member_owner");
         let target_owner = if self_referential_member_source_owner.is_some() {
             fallback_owner.to_string()
         } else {
             self.runtime_object_property_shadow_owner_name_for_identifier(target_name)
                 .unwrap_or_else(|| fallback_owner.to_string())
         };
+        trace_timing_step("target_owner");
         let constructor_returned_function_object_binding = state.function_binding.is_some()
             && matches!(state.canonical_value_expression, Expression::New { .. })
             && state.object_binding.is_some();
@@ -1435,6 +1527,7 @@ impl<'a> FunctionCompiler<'a> {
                     )
                 })
         };
+        trace_timing_step("source_owner");
         let source_owner_is_data_copy = self
             .expression_is_single_spread_shadow_copy(&state.canonical_value_expression)
             || self.expression_is_single_spread_shadow_copy(&state.module_assignment_expression);
@@ -1451,9 +1544,11 @@ impl<'a> FunctionCompiler<'a> {
                     binding
                 }
             });
+        trace_timing_step("source_shadow_object_binding");
         let prepared_object_binding = state.object_binding.clone().or_else(|| {
             self.resolve_object_binding_from_expression(&state.object_binding_expression)
         });
+        trace_timing_step("prepared_object_binding");
         let source_owner_is_class_alias = source_owner.as_deref().is_some_and(|source_owner| {
             source_owner.starts_with("__ayy_class_expr_")
                 || source_owner.starts_with("__ayy_class_ctor_")
@@ -1499,6 +1594,7 @@ impl<'a> FunctionCompiler<'a> {
                     &target_owner,
                 )
             });
+        trace_timing_step("object_binding");
 
         if trace_identifier_store {
             eprintln!(
@@ -1546,6 +1642,7 @@ impl<'a> FunctionCompiler<'a> {
                     .set_global_binding_kind(&target_owner, target_kind);
             }
         }
+        trace_timing_step("sync_static_object_binding");
 
         if source_owner.as_deref() == Some(target_owner.as_str()) {
             if let Some(object_binding) = object_binding.as_ref() {
@@ -1559,6 +1656,7 @@ impl<'a> FunctionCompiler<'a> {
                 fallback_owner,
                 object_binding.as_ref(),
             )?;
+            trace_timing_step("source_owner_matches_target");
             return Ok(());
         }
 
@@ -1603,11 +1701,13 @@ impl<'a> FunctionCompiler<'a> {
                     );
                 }
             }
+            trace_timing_step("static_metadata_only");
             return Ok(());
         }
 
         self.clear_runtime_object_property_shadow_prefix(&target_owner);
         self.clear_runtime_object_property_shadow_static_metadata_prefix(&target_owner);
+        trace_timing_step("clear_shadow_prefix");
 
         if let Some(source_owner) = source_owner {
             if import_meta_shadow_source_module_index(&source_owner).is_some() {
@@ -1666,6 +1766,7 @@ impl<'a> FunctionCompiler<'a> {
                     object_binding.as_ref(),
                 )?;
             }
+            trace_timing_step("source_owner_copy");
             return Ok(());
         }
 
@@ -1679,6 +1780,7 @@ impl<'a> FunctionCompiler<'a> {
                 &object_binding,
             );
         }
+        trace_timing_step("seed_from_binding");
 
         Ok(())
     }
@@ -1929,9 +2031,24 @@ impl<'a> FunctionCompiler<'a> {
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
-        let trace_step = |label: &str| {
+        let trace_shared_update_timing = crate::ayy_env_flag!("AYY_TRACE_SHARED_UPDATE_TIMING");
+        let timing_start = trace_shared_update_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |label: &str| {
             if trace_identifier_store {
                 eprintln!("identifier_store:{}:shared:{label}", state.resolved_name);
+            }
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "shared_update_timing name={} step={label} elapsed_ms={} total_ms={total_ms}",
+                    state.resolved_name,
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
             }
         };
         if state.resolved_name.starts_with("__ayy_target_object_")
@@ -1983,6 +2100,7 @@ impl<'a> FunctionCompiler<'a> {
                 || expression_is_array_buffer_constructor_instance(
                     &state.module_assignment_expression,
                 );
+        let value_is_static_object_literal = state_stores_static_object_literal_value(state);
         let value_contains_await = state.opaque_runtime_value
             || Self::expression_contains_await_for_user_call_runtime(
                 &state.canonical_value_expression,
@@ -2119,16 +2237,31 @@ impl<'a> FunctionCompiler<'a> {
                     .speculation
                     .static_semantics
                     .set_local_function_binding(&state.resolved_name, function_binding);
+            } else if value_is_static_object_literal {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_function_binding(&state.resolved_name);
             } else {
                 self.update_local_function_binding(
                     &state.resolved_name,
                     &state.function_binding_expression,
                 );
             }
-            self.preserve_identifier_function_capture_slots_for_local_store(state)?;
+            if !value_is_static_object_literal {
+                self.preserve_identifier_function_capture_slots_for_local_store(state)?;
+            }
             trace_step("local_function:done");
             trace_step("specialized_function:start");
-            if !value_is_local_simple_async_generator_next_call {
+            if value_is_static_object_literal {
+                crate::backend::direct_wasm::memo::bump_static_state_generation();
+                self.state
+                    .speculation
+                    .static_semantics
+                    .values
+                    .local_specialized_function_values
+                    .remove(&state.resolved_name);
+            } else if !value_is_local_simple_async_generator_next_call {
                 self.update_local_specialized_function_value(
                     &state.resolved_name,
                     specialized_value_expression,
@@ -2164,7 +2297,8 @@ impl<'a> FunctionCompiler<'a> {
                             | StaticValueKind::Function
                             | StaticValueKind::Symbol
                     )
-                );
+                )
+                || value_is_static_object_literal;
             let should_copy_runtime_array_source = !value_cannot_have_runtime_array_state
                 && matches!(state.tracked_value_expression, Expression::Identifier(_))
                 && self
@@ -2179,6 +2313,8 @@ impl<'a> FunctionCompiler<'a> {
                     || self
                         .backend
                         .global_has_implicit_binding(&state.resolved_name));
+            let array_binding_is_runtime_initializer_only =
+                state.array_binding_is_runtime_initializer_only();
             if value_cannot_have_runtime_array_state {
                 self.state
                     .speculation
@@ -2236,19 +2372,26 @@ impl<'a> FunctionCompiler<'a> {
                 self.push_i32_const(array_binding.values.len() as i32);
                 self.push_local_set(length_local);
                 self.ensure_runtime_array_slots_for_binding(&state.resolved_name, array_binding);
-                self.state
-                    .speculation
-                    .static_semantics
-                    .set_local_array_binding(&state.resolved_name, array_binding.clone());
+                if array_binding_is_runtime_initializer_only {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .clear_local_array_binding(&state.resolved_name);
+                } else {
+                    self.state
+                        .speculation
+                        .static_semantics
+                        .set_local_array_binding(&state.resolved_name, array_binding.clone());
+                }
                 self.state
                     .speculation
                     .static_semantics
                     .clear_tracked_array_specialized_function_values(&state.resolved_name);
                 if self.binding_name_is_global(&state.resolved_name) {
-                    self.backend.sync_global_array_binding(
-                        &state.resolved_name,
-                        Some(array_binding.clone()),
-                    );
+                    let global_array_binding =
+                        (!array_binding_is_runtime_initializer_only).then(|| array_binding.clone());
+                    self.backend
+                        .sync_global_array_binding(&state.resolved_name, global_array_binding);
                 }
                 self.state
                     .speculation
@@ -2262,23 +2405,48 @@ impl<'a> FunctionCompiler<'a> {
             }
             trace_step("array_binding:done");
             trace_step("resizable_array_buffer:start");
-            self.update_local_resizable_array_buffer_binding(
-                &state.resolved_name,
-                &state.tracked_value_expression,
-            )?;
+            if value_is_static_object_literal {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_resizable_array_buffer_binding(&state.resolved_name);
+            } else {
+                self.update_local_resizable_array_buffer_binding(
+                    &state.resolved_name,
+                    &state.tracked_value_expression,
+                )?;
+            }
             trace_step("resizable_array_buffer:done");
             trace_step("typed_array_view:start");
-            self.update_local_typed_array_view_binding(
-                &state.resolved_name,
-                &state.tracked_value_expression,
-            )?;
+            if value_is_static_object_literal {
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_local_typed_array_view_binding(&state.resolved_name);
+                self.state
+                    .speculation
+                    .static_semantics
+                    .clear_runtime_typed_array_oob_local(&state.resolved_name);
+            } else {
+                self.update_local_typed_array_view_binding(
+                    &state.resolved_name,
+                    &state.tracked_value_expression,
+                )?;
+            }
             trace_step("typed_array_view:done");
         }
         trace_step("iterator_step:start");
-        self.update_local_iterator_step_binding(
-            &state.resolved_name,
-            &state.tracked_value_expression,
-        );
+        if value_is_static_object_literal {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_iterator_step_binding(&state.resolved_name);
+        } else {
+            self.update_local_iterator_step_binding(
+                &state.resolved_name,
+                &state.tracked_value_expression,
+            );
+        }
         trace_step("iterator_step:done");
         if state.is_internal_array_step_binding {
             self.state
@@ -2393,6 +2561,19 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(());
         }
         trace_step("iterator_source:start");
+        if value_is_static_object_literal {
+            self.state
+                .speculation
+                .static_semantics
+                .arrays
+                .clear_cached_iterator_next_method_binding(&state.resolved_name);
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_array_iterator_binding(&state.resolved_name);
+            trace_step("iterator_source:static_object_literal");
+            return Ok(());
+        }
         let iterator_binding_alias = self.resolve_identifier_store_iterator_binding_alias(state);
         let iterator_binding_source = self.resolve_identifier_store_iterator_binding_source(state);
         trace_step("iterator_source:done");

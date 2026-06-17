@@ -21,8 +21,9 @@ impl Lowerer {
         match statement {
             Stmt::Decl(Decl::Fn(function_declaration)) => {
                 if self.module_mode {
-                    lowered_statements
-                        .extend(self.lower_nested_function_declaration(function_declaration)?);
+                    lowered_statements.extend(
+                        self.lower_top_level_module_function_declaration(function_declaration)?,
+                    );
                 } else {
                     let lowered = self.lower_function_declaration(function_declaration, true)?;
                     self.functions.push(lowered);

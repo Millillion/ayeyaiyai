@@ -3,6 +3,8 @@ use super::*;
 #[derive(Clone)]
 pub(in crate::backend::direct_wasm) struct PreparedFunctionCompilerInputs {
     pub(in crate::backend::direct_wasm) shared_program: PreparedSharedProgramContext,
+    pub(in crate::backend::direct_wasm) assigned_nonlocal_bindings:
+        Rc<HashMap<String, HashSet<String>>>,
     pub(in crate::backend::direct_wasm) assigned_nonlocal_binding_results:
         Rc<HashMap<String, HashMap<String, Expression>>>,
 }
@@ -18,5 +20,11 @@ impl PreparedFunctionCompilerInputs {
         &self,
     ) -> Rc<HashMap<String, HashMap<String, Expression>>> {
         self.assigned_nonlocal_binding_results.clone()
+    }
+
+    pub(in crate::backend::direct_wasm) fn assigned_nonlocal_bindings_snapshot(
+        &self,
+    ) -> Rc<HashMap<String, HashSet<String>>> {
+        self.assigned_nonlocal_bindings.clone()
     }
 }

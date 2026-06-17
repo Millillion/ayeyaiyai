@@ -481,7 +481,11 @@ impl<'a> FunctionCompiler<'a> {
             target_owner,
             updated_receiver_binding,
         );
-        let updated_receiver_expression = object_binding_to_expression(updated_receiver_binding);
+        let updated_receiver_binding = Self::canonicalize_runtime_shadow_receiver_binding(
+            target_owner,
+            updated_receiver_binding,
+        );
+        let updated_receiver_expression = object_binding_to_expression(&updated_receiver_binding);
         let resolved_identifier_name = match this_expression {
             Expression::Identifier(name) => self
                 .resolve_current_local_binding(name)
@@ -507,12 +511,18 @@ impl<'a> FunctionCompiler<'a> {
                             &updated_receiver_expression,
                         );
                     }
-                    self.update_local_object_binding(resolved_name, &updated_receiver_expression);
+                    self.set_receiver_object_binding_without_shadow_resync(
+                        resolved_name,
+                        &updated_receiver_binding,
+                    );
                 }
                 if !preserve_class_alias {
                     self.update_local_value_binding(name, &updated_receiver_expression);
                 }
-                self.update_local_object_binding(name, &updated_receiver_expression);
+                self.set_receiver_object_binding_without_shadow_resync(
+                    name,
+                    &updated_receiver_binding,
+                );
                 if !preserve_class_alias
                     && (self.binding_name_is_global(name)
                         || self.global_has_binding(name)
@@ -526,10 +536,135 @@ impl<'a> FunctionCompiler<'a> {
             }
             Expression::This => {
                 self.update_local_value_binding("this", &updated_receiver_expression);
-                self.update_local_object_binding("this", &updated_receiver_expression);
+                self.set_receiver_object_binding_without_shadow_resync(
+                    "this",
+                    &updated_receiver_binding,
+                );
             }
             _ => {}
         }
+    }
+
+    fn set_receiver_object_binding_without_shadow_resync(
+        &mut self,
+        name: &str,
+        object_binding: &ObjectValueBinding,
+    ) {
+        let preserve_function_identity =
+            self.runtime_shadow_owner_should_preserve_function_identity(name);
+        let kind = if preserve_function_identity {
+            StaticValueKind::Function
+        } else {
+            StaticValueKind::Object
+        };
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_object_binding(name, object_binding.clone());
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_kind(name, kind);
+        if self.binding_name_is_global(name) {
+            self.backend
+                .sync_global_object_binding(name, Some(object_binding.clone()));
+            self.backend.set_global_binding_kind(name, kind);
+        }
+    }
+
+    fn canonicalize_runtime_shadow_receiver_binding(
+        target_owner: &str,
+        updated_receiver_binding: &ObjectValueBinding,
+    ) -> ObjectValueBinding {
+        if target_owner == "this" {
+            return updated_receiver_binding.clone();
+        }
+
+        let mut binding = updated_receiver_binding.clone();
+        for (property_name, value) in &mut binding.string_properties {
+            let property = Expression::String(property_name.clone());
+            if Self::runtime_shadow_receiver_value_references_current_this(value, &property) {
+                *value = Expression::Identifier(Self::runtime_object_member_shadow_owner_name(
+                    target_owner,
+                    &property,
+                ));
+            }
+        }
+        for (property, value) in &mut binding.symbol_properties {
+            if Self::runtime_shadow_receiver_value_references_current_this(value, property) {
+                *value = Expression::Identifier(Self::runtime_object_member_shadow_owner_name(
+                    target_owner,
+                    property,
+                ));
+            }
+        }
+        for (property, descriptor) in &mut binding.property_descriptors {
+            if let Some(value) = descriptor.value.as_mut()
+                && Self::runtime_shadow_receiver_value_references_current_this(value, property)
+            {
+                *value = Expression::Identifier(Self::runtime_object_member_shadow_owner_name(
+                    target_owner,
+                    property,
+                ));
+            }
+        }
+        binding
+    }
+
+    pub(in crate::backend::direct_wasm) fn canonicalize_runtime_shadow_receiver_metadata_binding(
+        target_owner: &str,
+        updated_receiver_binding: &ObjectValueBinding,
+    ) -> ObjectValueBinding {
+        let mut binding = updated_receiver_binding.clone();
+        let receiver_value = Expression::Identifier(target_owner.to_string());
+        for (property_name, value) in &mut binding.string_properties {
+            let property = Expression::String(property_name.clone());
+            if Self::runtime_shadow_receiver_value_references_owner(value, target_owner, &property)
+            {
+                *value = receiver_value.clone();
+            }
+        }
+        for (property, value) in &mut binding.symbol_properties {
+            if Self::runtime_shadow_receiver_value_references_owner(value, target_owner, property) {
+                *value = receiver_value.clone();
+            }
+        }
+        for (property, descriptor) in &mut binding.property_descriptors {
+            if let Some(value) = descriptor.value.as_mut()
+                && Self::runtime_shadow_receiver_value_references_owner(
+                    value,
+                    target_owner,
+                    property,
+                )
+            {
+                *value = receiver_value.clone();
+            }
+        }
+        binding
+    }
+
+    pub(in crate::backend::direct_wasm) fn runtime_shadow_receiver_value_references_owner(
+        value: &Expression,
+        owner: &str,
+        property: &Expression,
+    ) -> bool {
+        if Self::runtime_shadow_receiver_value_references_current_this(value, property) {
+            return true;
+        }
+        let owner_member = Self::runtime_object_member_shadow_owner_name(owner, property);
+        matches!(value, Expression::Identifier(name) if name == &owner_member)
+    }
+
+    fn runtime_shadow_receiver_value_references_current_this(
+        value: &Expression,
+        property: &Expression,
+    ) -> bool {
+        if matches!(value, Expression::This) {
+            return true;
+        }
+        let current_this_member_owner =
+            Self::runtime_object_member_shadow_owner_name("this", property);
+        matches!(value, Expression::Identifier(name) if name == &current_this_member_owner)
     }
 
     fn object_binding_contains_private_brand_marker(
@@ -4262,6 +4397,7 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(saved_shadow_owner) = saved_shadow_owner.as_deref() {
             self.emit_runtime_object_property_shadow_copy("this", saved_shadow_owner)?;
             self.clear_runtime_object_property_shadow_prefix("this");
+            self.clear_runtime_object_property_shadow_static_metadata_prefix("this");
         }
 
         if let Some(target_owner) = target_owner.as_deref().filter(|owner| *owner != "this") {
@@ -4414,9 +4550,11 @@ impl<'a> FunctionCompiler<'a> {
 
         if let Some(saved_shadow_owner) = saved_shadow_owner {
             self.clear_runtime_object_property_shadow_prefix("this");
+            self.clear_runtime_object_property_shadow_static_metadata_prefix("this");
             self.emit_runtime_object_property_shadow_copy(saved_shadow_owner, "this")?;
         } else if target_owner.as_deref() != Some("this") {
             self.clear_runtime_object_property_shadow_prefix("this");
+            self.clear_runtime_object_property_shadow_static_metadata_prefix("this");
         }
 
         if allow_static_receiver_update && let Some(updated_this) = explicit_updated_this {

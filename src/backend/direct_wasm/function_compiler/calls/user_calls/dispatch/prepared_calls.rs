@@ -102,6 +102,51 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
+    fn user_function_call_effects_are_assigned_bindings_only(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        if user_function.has_parameter_defaults()
+            || !self
+                .user_function_parameter_iterator_consumption_indices(user_function)
+                .is_empty()
+        {
+            return false;
+        }
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+
+        struct CallOrConstructFinder {
+            found: bool,
+        }
+        impl crate::ir::visit::Visitor for CallOrConstructFinder {
+            fn visit_expression(&mut self, expression: &Expression) {
+                if self.found {
+                    return;
+                }
+                if matches!(
+                    expression,
+                    Expression::Call { .. } | Expression::New { .. } | Expression::SuperCall { .. }
+                ) {
+                    self.found = true;
+                    return;
+                }
+                crate::ir::visit::walk_expression(self, expression);
+            }
+        }
+
+        let mut finder = CallOrConstructFinder { found: false };
+        for statement in &function.body {
+            crate::ir::visit::Visitor::visit_statement(&mut finder, statement);
+            if finder.found {
+                return false;
+            }
+        }
+        true
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_prepared_user_function_call_with_new_target_and_this(
         &mut self,
         user_function: &UserFunction,
@@ -157,6 +202,8 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         let module_init_call = user_function.name.starts_with("__ayy_module_init_");
+        let large_static_call_analysis =
+            self.user_function_exceeds_static_call_analysis_budget(user_function);
         self.sync_static_with_scope_member_assignment_effects(user_function);
         let runtime_only_parameter_iterator_call = user_function.has_lowered_pattern_parameters()
             || !self
@@ -167,8 +214,14 @@ impl<'a> FunctionCompiler<'a> {
             .any(Self::expression_contains_await_for_user_call_runtime);
         let runtime_only_promise_chain_call = !enable_static_snapshot
             && self.registered_function_body_mentions_promise_like_chain(&user_function.name);
-        let skip_static_call_effect_analysis =
-            runtime_only_parameter_iterator_call || module_init_call || arguments_contain_await;
+        let skip_large_static_call_effect_analysis =
+            large_static_call_analysis && prepared_capture_bindings.is_empty();
+        let runtime_only_without_static_snapshot = !enable_static_snapshot;
+        let skip_static_call_effect_analysis = runtime_only_parameter_iterator_call
+            || module_init_call
+            || runtime_only_without_static_snapshot
+            || arguments_contain_await
+            || skip_large_static_call_effect_analysis;
         if trace_user_calls {
             eprintln!(
                 "prepared_user_call:after_runtime_only target={} runtime_only={} promise_chain_runtime_only={} await_args={} skip_static_effects={}",
@@ -180,6 +233,7 @@ impl<'a> FunctionCompiler<'a> {
             );
         }
         let allow_static_snapshot = enable_static_snapshot
+            && !large_static_call_analysis
             && !self.user_function_mentions_private_member_access(user_function)
             && !self.user_function_contains_self_callee_reference(&user_function.name);
         if trace_user_calls {
@@ -268,7 +322,7 @@ impl<'a> FunctionCompiler<'a> {
             });
         crate::backend::direct_wasm::memo::bump_static_state_generation();
         let assigned_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
+            self.prepared_user_function_assigned_nonlocal_bindings(user_function)
         } else {
             self.collect_user_function_assigned_nonlocal_bindings(user_function)
         };
@@ -279,7 +333,15 @@ impl<'a> FunctionCompiler<'a> {
                 assigned_nonlocal_bindings.len()
             );
         }
-        let mut call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
+        let mut call_effect_nonlocal_bindings = if skip_large_static_call_effect_analysis {
+            assigned_nonlocal_bindings.clone()
+        } else if runtime_only_without_static_snapshot
+            && self.user_function_call_effects_are_assigned_bindings_only(user_function)
+        {
+            assigned_nonlocal_bindings.clone()
+        } else if runtime_only_without_static_snapshot {
+            self.collect_user_function_call_effect_nonlocal_bindings(user_function)
+        } else if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             self.collect_user_function_call_effect_nonlocal_bindings(user_function)
@@ -312,22 +374,29 @@ impl<'a> FunctionCompiler<'a> {
             self.assigned_nonlocal_binding_results(&user_function.name)
                 .cloned()
         };
-        let additional_call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
-        } else {
-            let mut names = call_effect_nonlocal_bindings
-                .iter()
-                .filter(|name| !synced_capture_source_bindings.contains(*name))
-                .cloned()
-                .collect::<HashSet<_>>();
-            names.extend(self.collect_snapshot_updated_nonlocal_bindings(
-                user_function,
-                updated_bindings.as_ref(),
-            ));
-            names
-        };
+        let additional_call_effect_nonlocal_bindings =
+            if skip_large_static_call_effect_analysis || runtime_only_without_static_snapshot {
+                call_effect_nonlocal_bindings
+                    .iter()
+                    .filter(|name| !synced_capture_source_bindings.contains(*name))
+                    .cloned()
+                    .collect::<HashSet<_>>()
+            } else if skip_static_call_effect_analysis {
+                HashSet::new()
+            } else {
+                let mut names = call_effect_nonlocal_bindings
+                    .iter()
+                    .filter(|name| !synced_capture_source_bindings.contains(*name))
+                    .cloned()
+                    .collect::<HashSet<_>>();
+                names.extend(self.collect_snapshot_updated_nonlocal_bindings(
+                    user_function,
+                    updated_bindings.as_ref(),
+                ));
+                names
+            };
         let updated_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
+            assigned_nonlocal_bindings.clone()
         } else {
             self.collect_user_function_updated_nonlocal_bindings(user_function)
         };

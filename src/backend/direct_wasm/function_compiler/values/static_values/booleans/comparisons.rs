@@ -172,7 +172,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
-    fn resolve_static_object_identity_boolean(
+    pub(in crate::backend::direct_wasm) fn resolve_static_object_identity_boolean(
         &self,
         op: &BinaryOp,
         left: &Expression,
@@ -277,24 +277,20 @@ impl<'a> FunctionCompiler<'a> {
                 || class_constructor_identity_aliases_match(&left_identity, &right_identity);
             return Some(same_identity ^ is_not_equal);
         }
+        let left_primitive = self
+            .resolve_static_primitive_expression_with_context(left, self.current_function_name());
+        let right_primitive = self
+            .resolve_static_primitive_expression_with_context(right, self.current_function_name());
         let object_vs_primitive = (self
             .resolve_static_object_identity_expression(left)
             .is_some()
-            && self
-                .resolve_static_primitive_expression_with_context(
-                    right,
-                    self.current_function_name(),
-                )
-                .is_some())
+            && left_primitive.is_none()
+            && right_primitive.is_some())
             || (self
                 .resolve_static_object_identity_expression(right)
                 .is_some()
-                && self
-                    .resolve_static_primitive_expression_with_context(
-                        left,
-                        self.current_function_name(),
-                    )
-                    .is_some());
+                && right_primitive.is_none()
+                && left_primitive.is_some());
         object_vs_primitive.then_some(is_not_equal)
     }
 

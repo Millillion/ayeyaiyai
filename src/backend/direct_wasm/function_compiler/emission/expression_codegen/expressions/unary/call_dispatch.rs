@@ -497,6 +497,41 @@ impl<'a> FunctionCompiler<'a> {
             .or_else(|| self.resolve_static_number_value(expression))
     }
 
+    pub(in crate::backend::direct_wasm) fn call_expression_static_member_number_shortcut_value(
+        &self,
+        expression: &Expression,
+    ) -> Option<f64> {
+        let Expression::Call { callee, arguments } = expression else {
+            return None;
+        };
+        let Expression::Member { object, property } = callee.as_ref() else {
+            return None;
+        };
+        if self
+            .resolve_object_binding_from_expression(object)
+            .is_none()
+            || !inline_summary_side_effect_free_expression(object)
+            || !inline_summary_side_effect_free_expression(property)
+            || arguments
+                .iter()
+                .any(|argument| !inline_summary_side_effect_free_expression(argument.expression()))
+        {
+            return None;
+        }
+        let LocalFunctionBinding::User(function_name) =
+            self.resolve_member_function_binding(object, property)?
+        else {
+            return None;
+        };
+        let user_function = self.user_function(&function_name)?;
+        let materialized_this_expression = self.materialize_static_expression(object);
+        self.resolve_fast_static_user_function_call_number(
+            user_function,
+            arguments,
+            &materialized_this_expression,
+        )
+    }
+
     fn call_expression_static_nullish_shortcut_value(
         &self,
         expression: &Expression,
@@ -845,6 +880,23 @@ impl<'a> FunctionCompiler<'a> {
                 self.state.emission.control_flow.try_stack.len(),
                 callee_requires_runtime_private_brand_check
             );
+        }
+        if self.state.emission.control_flow.try_stack.is_empty()
+            && !callee_requires_runtime_private_brand_check
+            && !known_local_iterator_next_call
+            && !promise_chain_call
+            && !reads_descriptor_member
+            && let Some(number) =
+                self.call_expression_static_member_number_shortcut_value(expression)
+        {
+            if trace_call_dispatch {
+                eprintln!(
+                    "call_dispatch:static_member_number function={:?} number={:?}",
+                    self.current_function_name(),
+                    number
+                );
+            }
+            return self.emit_numeric_expression(&Expression::Number(number));
         }
         if self.state.emission.control_flow.try_stack.is_empty()
             && !callee_requires_runtime_private_brand_check

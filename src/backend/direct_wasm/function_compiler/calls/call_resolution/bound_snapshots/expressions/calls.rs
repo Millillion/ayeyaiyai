@@ -30,6 +30,127 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn evaluate_bound_snapshot_define_property_call(
+        &self,
+        reflect_call: bool,
+        arguments: &[CallArgument],
+        bindings: &mut HashMap<String, Expression>,
+        current_function_name: Option<&str>,
+    ) -> Option<Expression> {
+        let [
+            CallArgument::Expression(target),
+            CallArgument::Expression(property),
+            CallArgument::Expression(descriptor),
+            ..,
+        ] = arguments
+        else {
+            return Some(if reflect_call {
+                Expression::Bool(false)
+            } else {
+                Expression::Undefined
+            });
+        };
+        let Some(descriptor) = resolve_property_descriptor_definition(descriptor) else {
+            return Some(if reflect_call {
+                Expression::Bool(false)
+            } else {
+                self.evaluate_bound_snapshot_expression(target, bindings, current_function_name)
+                    .unwrap_or_else(|| self.materialize_static_expression(target))
+            });
+        };
+
+        let target_name = match target {
+            Expression::Identifier(name) => Some(
+                self.resolve_bound_snapshot_binding_name(name, bindings)
+                    .to_string(),
+            ),
+            _ => self
+                .evaluate_bound_snapshot_expression(target, bindings, current_function_name)
+                .and_then(|value| match value {
+                    Expression::Identifier(name) => Some(name),
+                    _ => None,
+                }),
+        };
+        let Some(target_name) = target_name else {
+            return Some(if reflect_call {
+                Expression::Bool(false)
+            } else {
+                self.evaluate_bound_snapshot_expression(target, bindings, current_function_name)
+                    .unwrap_or_else(|| self.materialize_static_expression(target))
+            });
+        };
+
+        let target_value = bindings
+            .get(&target_name)
+            .cloned()
+            .unwrap_or_else(|| Expression::Identifier(target_name.clone()));
+        let mut object_binding = self
+            .resolve_object_binding_from_expression(&target_value)
+            .unwrap_or_else(empty_object_value_binding);
+        let property = self
+            .evaluate_bound_snapshot_expression(property, bindings, current_function_name)
+            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let property = self
+            .resolve_property_key_expression(&property)
+            .unwrap_or(property);
+
+        if !object_binding_can_define_property(&object_binding, &property) {
+            return Some(if reflect_call {
+                Expression::Bool(false)
+            } else {
+                Expression::Identifier(target_name)
+            });
+        }
+
+        let descriptor_value =
+            |expression: &Expression,
+             context: &FunctionCompiler<'a>,
+             bindings: &mut HashMap<String, Expression>| {
+                context
+                    .evaluate_bound_snapshot_expression(expression, bindings, current_function_name)
+                    .unwrap_or_else(|| context.materialize_static_expression(expression))
+            };
+        let value = descriptor
+            .value
+            .as_ref()
+            .map(|expression| descriptor_value(expression, self, bindings));
+        let getter = descriptor
+            .getter
+            .as_ref()
+            .map(|expression| descriptor_value(expression, self, bindings));
+        let setter = descriptor
+            .setter
+            .as_ref()
+            .map(|expression| descriptor_value(expression, self, bindings));
+        object_binding_define_property_descriptor(
+            &mut object_binding,
+            property,
+            PropertyDescriptorBinding {
+                value,
+                configurable: descriptor.configurable.unwrap_or(false),
+                enumerable: descriptor.enumerable.unwrap_or(false),
+                writable: if descriptor.is_accessor() {
+                    None
+                } else {
+                    Some(descriptor.writable.unwrap_or(false))
+                },
+                getter,
+                setter,
+                has_get: descriptor.getter.is_some(),
+                has_set: descriptor.setter.is_some(),
+            },
+        );
+        bindings.insert(
+            target_name.clone(),
+            object_binding_to_expression_with_descriptor_entries(&object_binding),
+        );
+        Some(if reflect_call {
+            Expression::Bool(true)
+        } else {
+            Expression::Identifier(target_name)
+        })
+    }
+
     pub(super) fn evaluate_bound_snapshot_call_expression(
         &self,
         callee: &Expression,
@@ -176,6 +297,19 @@ impl<'a> FunctionCompiler<'a> {
                 callee: Box::new(effective_callee.clone()),
                 arguments: arguments.to_vec(),
             });
+        }
+        if let Expression::Member { object, property } = effective_callee
+            && matches!(object.as_ref(), Expression::Identifier(name) if name == "Object" || name == "Reflect")
+            && matches!(property.as_ref(), Expression::String(name) if name == "defineProperty")
+        {
+            let reflect_call =
+                matches!(object.as_ref(), Expression::Identifier(name) if name == "Reflect");
+            return self.evaluate_bound_snapshot_define_property_call(
+                reflect_call,
+                arguments,
+                bindings,
+                current_function_name,
+            );
         }
         let binding = self.resolve_function_binding_from_expression_with_context(
             effective_callee,

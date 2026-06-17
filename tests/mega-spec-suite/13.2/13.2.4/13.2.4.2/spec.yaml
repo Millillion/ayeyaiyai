@@ -1,0 +1,16 @@
+subclause: "13.2.4.2"
+title: "Runtime Semantics: Evaluation"
+url: https://262.ecma-international.org/16.0/#sec-array-initializer-runtime-semantics-evaluation
+behaviors:
+  - array-literal-creates-new-array-object
+  - trailing-comma-does-not-add-element
+
+behavior_descriptions:
+  array-literal-creates-new-array-object: |
+    ArrayLiteral evaluation creates and returns a new Array object before
+    applying any elision or element accumulation.
+
+  trailing-comma-does-not-add-element: |
+    ArrayLiteral with ElementList followed by a comma returns the accumulated
+    array, and a final trailing comma without Elision does not increase length
+    or create another element.

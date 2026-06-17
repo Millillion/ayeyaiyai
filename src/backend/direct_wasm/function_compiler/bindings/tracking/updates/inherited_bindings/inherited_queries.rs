@@ -126,6 +126,41 @@ impl<'a> FunctionCompiler<'a> {
             .collect()
     }
 
+    fn user_function_call_returns_no_inherited_member_function_bindings(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+    ) -> bool {
+        if !user_function.returned_member_function_bindings.is_empty()
+            || arguments
+                .iter()
+                .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            return false;
+        }
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            return false;
+        };
+        let [Statement::Return(Expression::Object(entries))] = function.body.as_slice() else {
+            return false;
+        };
+        entries.iter().all(|entry| {
+            let ObjectEntry::Data { key: _, value } = entry else {
+                return false;
+            };
+            if object_entry_is_literal_proto_setter(entry) {
+                return false;
+            }
+            let value =
+                self.substitute_user_function_argument_bindings(value, user_function, arguments);
+            inline_summary_side_effect_free_expression(&value)
+                && self
+                    .resolve_function_binding_from_expression(&value)
+                    .is_none()
+        })
+    }
+
     pub(in crate::backend::direct_wasm) fn inherited_member_function_bindings(
         &self,
         value: &Expression,
@@ -301,6 +336,14 @@ impl<'a> FunctionCompiler<'a> {
                     if trace_inherited_bindings {
                         eprintln!("inherited_member_function_bindings:call:simple_generator_next");
                     }
+                    return Vec::new();
+                }
+                if let Some(user_function) = self.resolve_user_function_from_expression(callee)
+                    && self.user_function_call_returns_no_inherited_member_function_bindings(
+                        user_function,
+                        arguments,
+                    )
+                {
                     return Vec::new();
                 }
                 if trace_inherited_bindings {

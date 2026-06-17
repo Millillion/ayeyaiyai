@@ -1,6 +1,28 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn member_value_may_need_iterator_source_alias_preservation(&self, value: &Expression) -> bool {
+        match value {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined => false,
+            Expression::Identifier(_) => {
+                if let Some(LocalFunctionBinding::User(function_name)) =
+                    self.resolve_function_binding_from_expression(value)
+                    && self
+                        .user_function(&function_name)
+                        .is_some_and(|user_function| !user_function.is_generator())
+                {
+                    return false;
+                }
+                true
+            }
+            _ => true,
+        }
+    }
+
     pub(super) fn materialize_get_prototype_of_constructor_member(
         &self,
         object: &Expression,
@@ -738,7 +760,9 @@ impl<'a> FunctionCompiler<'a> {
             if let Some(value) =
                 object_binding_lookup_value(&object_binding, &materialized_property)
             {
-                if self.resolve_iterator_source_kind(value).is_some() {
+                if self.member_value_may_need_iterator_source_alias_preservation(value)
+                    && self.resolve_iterator_source_kind(value).is_some()
+                {
                     return value.clone();
                 }
                 if argument_index_from_expression(&materialized_property).is_some()

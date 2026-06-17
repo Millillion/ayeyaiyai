@@ -275,7 +275,7 @@ impl<'a> FunctionCompiler<'a> {
                     self.resolve_static_boxed_primitive_value(target_candidate)
                 {
                     return Some(PropertyDescriptorBinding {
-                        value: Some(Expression::Number(text.chars().count() as f64)),
+                        value: Some(Expression::Number(text.encode_utf16().count() as f64)),
                         configurable: false,
                         enumerable: false,
                         writable: Some(false),

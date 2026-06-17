@@ -44,6 +44,8 @@ impl FunctionExecutionContextState {
 
     pub(in crate::backend::direct_wasm) fn reset_isolated_indirect_eval_entry(&mut self) {
         self.current_user_function_name = None;
+        self.current_user_function = None;
+        self.current_function_declaration = None;
         self.current_arguments_callee_present = false;
         self.current_arguments_callee_override = None;
         self.current_arguments_length_present = false;

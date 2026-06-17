@@ -1,6 +1,18 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn raw_assigned_name_is_declared_by_user_function(
+        user_function: &UserFunction,
+        name: &str,
+    ) -> bool {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        user_function.scope_bindings.contains(source_name)
+            || user_function.params.iter().any(|param| {
+                let param_source_name = scoped_binding_source_name(param).unwrap_or(param);
+                param == source_name || param_source_name == source_name
+            })
+    }
+
     pub(in crate::backend::direct_wasm) fn synced_prepared_user_function_capture_source_bindings(
         &self,
         prepared: &[PreparedCaptureBinding],
@@ -82,6 +94,9 @@ impl<'a> FunctionCompiler<'a> {
         let names = self
             .collect_user_function_raw_assigned_binding_names(user_function)
             .into_iter()
+            .filter(|name| {
+                !Self::raw_assigned_name_is_declared_by_user_function(user_function, name)
+            })
             .filter(|name| {
                 self.global_has_binding(name)
                     || self.global_has_implicit_binding(name)

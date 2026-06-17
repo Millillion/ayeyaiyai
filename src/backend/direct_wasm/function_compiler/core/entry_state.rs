@@ -120,6 +120,7 @@ impl<'a> FunctionCompiler<'a> {
         )?;
         let prepared_analysis = PreparedProgramAnalysis::new(
             HashMap::new(),
+            HashMap::new(),
             module.state.prepared_user_function_metadata_snapshot(),
             module
                 .state
@@ -270,6 +271,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         let assigned_nonlocal_binding_results =
             prepared_inputs.assigned_nonlocal_binding_results_snapshot();
+        let assigned_nonlocal_bindings = prepared_inputs.assigned_nonlocal_bindings_snapshot();
         let mut compiler = Self {
             backend: FunctionCompilerBackend::new(
                 module_artifacts,
@@ -282,7 +284,15 @@ impl<'a> FunctionCompiler<'a> {
                 *process_argv_layout,
             ),
             prepared_program: program_context,
+            assigned_nonlocal_bindings,
             assigned_nonlocal_binding_results,
+            call_effect_nonlocal_bindings_cache: std::cell::RefCell::new((
+                crate::backend::direct_wasm::memo::static_state_generation(),
+                HashMap::new(),
+            )),
+            user_function_private_member_access_cache: std::cell::RefCell::new(HashMap::new()),
+            user_function_direct_eval_cache: std::cell::RefCell::new(HashMap::new()),
+            runtime_check_helper_plan_cache: std::cell::RefCell::new(HashMap::new()),
             state: FunctionCompilerState::from_prepared_entry_state(entry_state),
         };
         compiler.recover_parameter_object_bindings_from_value_bindings();

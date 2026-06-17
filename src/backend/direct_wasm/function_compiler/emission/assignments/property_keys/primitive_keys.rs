@@ -148,6 +148,14 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(key);
             }
         }
+        if let Expression::Call { callee, arguments } = expression
+            && let Some(return_value) =
+                self.resolve_effectful_call_return_metadata_value(callee, arguments)
+            && !static_expression_matches(&return_value, expression)
+            && let Some(key) = self.resolve_primitive_property_key_expression(&return_value)
+        {
+            return Some(key);
+        }
         if let Some(property_name) = self.static_property_key_from_generator_call(expression) {
             return Some(Expression::String(property_name));
         }
@@ -169,6 +177,9 @@ impl<'a> FunctionCompiler<'a> {
             }
             if let Some(symbol_identity) = self.resolve_symbol_identity_expression(&resolved) {
                 return Some(symbol_identity);
+            }
+            if let Some(key) = self.resolve_primitive_property_key_expression(&resolved) {
+                return Some(key);
             }
         }
         if let Expression::Call { callee, arguments } = expression

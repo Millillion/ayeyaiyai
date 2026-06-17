@@ -1,0 +1,37 @@
+subclause: "13.1.3"
+title: "Runtime Semantics: Evaluation"
+url: https://262.ecma-international.org/16.0/#sec-identifiers-runtime-semantics-evaluation
+behaviors:
+  - identifier-reference-resolves-binding
+  - yield-reference-resolves-binding
+  - await-reference-resolves-binding
+  - identifier-reference-is-reference
+  - identifier-reference-resolves-nearest-binding
+  - identifier-reference-unresolvable-throws
+
+behavior_descriptions:
+  identifier-reference-resolves-binding: |
+    IdentifierReference Identifier evaluates by resolving the binding named by
+    the Identifier StringValue.
+
+  yield-reference-resolves-binding: |
+    IdentifierReference yield evaluates by resolving the binding named yield
+    when that syntax is permitted.
+
+  await-reference-resolves-binding: |
+    IdentifierReference await evaluates by resolving the binding named await
+    when that syntax is permitted.
+
+  identifier-reference-is-reference: |
+    IdentifierReference evaluation produces a Reference, so assignment and
+    update operations write through the resolved binding instead of using only
+    a copied value.
+
+  identifier-reference-resolves-nearest-binding: |
+    IdentifierReference evaluation resolves the named binding in the active
+    lexical environment, so nearer lexical or function bindings shadow outer
+    bindings with the same StringValue.
+
+  identifier-reference-unresolvable-throws: |
+    Reading an IdentifierReference whose name has no resolved binding produces
+    the same observable ReferenceError as Node.js.

@@ -2465,8 +2465,29 @@ impl<'a> FunctionCompiler<'a> {
                 .unwrap_or_else(|| expression.clone())
         };
         let mut call_arguments = None;
+        let mut explicit_this_binding = None;
         let callee = match &resolved {
-            Expression::Call { callee, arguments } | Expression::New { callee, arguments } => {
+            Expression::Call { callee, arguments } => {
+                if let Expression::Member { object, property } = callee.as_ref()
+                    && matches!(property.as_ref(), Expression::String(name) if name == "call")
+                    && self
+                        .resolve_function_binding_from_expression(object)
+                        .is_some()
+                {
+                    explicit_this_binding = Some(
+                        arguments
+                            .first()
+                            .map(|argument| argument.expression().clone())
+                            .unwrap_or(Expression::Undefined),
+                    );
+                    call_arguments = Some(arguments.get(1..).unwrap_or_default());
+                    object.as_ref()
+                } else {
+                    call_arguments = Some(arguments.as_slice());
+                    callee.as_ref()
+                }
+            }
+            Expression::New { callee, arguments } => {
                 call_arguments = Some(arguments.as_slice());
                 callee.as_ref()
             }
@@ -2478,6 +2499,20 @@ impl<'a> FunctionCompiler<'a> {
             return None;
         };
         let user_function = self.user_function(&function_name)?;
+        if call_arguments.is_some()
+            && let Some(this_binding) = explicit_this_binding.as_ref()
+            && let Expression::Call { callee, arguments } = &resolved
+            && let Some(LocalFunctionBinding::User(returned_function_name)) =
+                self.resolve_returned_function_binding_from_call(callee, arguments)
+            && let Some(returned_capture_bindings) =
+                self.user_function_capture_bindings(&returned_function_name)
+            && !returned_capture_bindings.is_empty()
+            && returned_capture_bindings
+                .keys()
+                .all(|capture_name| capture_name == "this")
+        {
+            return Some(HashMap::from([("this".to_string(), this_binding.clone())]));
+        }
         if call_arguments.is_none() {
             let constructor_slot_owner = match expression {
                 Expression::Identifier(name) => Some(name),
@@ -2616,7 +2651,9 @@ impl<'a> FunctionCompiler<'a> {
             &function_name,
             user_function,
             arguments,
-            &Expression::Undefined,
+            explicit_this_binding
+                .as_ref()
+                .unwrap_or(&Expression::Undefined),
             None,
             HashMap::new(),
             |statement| statement,
@@ -2625,6 +2662,10 @@ impl<'a> FunctionCompiler<'a> {
             &execution.substituted_body,
             &mut execution.environment,
         )?;
-        Some(execution.environment.into_local_bindings())
+        let mut bindings = execution.environment.into_local_bindings();
+        if let Some(this_binding) = explicit_this_binding {
+            bindings.insert("this".to_string(), this_binding);
+        }
+        Some(bindings)
     }
 }

@@ -52,6 +52,111 @@ impl<'a> FunctionCompiler<'a> {
         self.typed_array_view_binding_for_name(name).is_some()
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_may_resolve_typed_array_view_binding(
+        &self,
+        expression: &Expression,
+    ) -> bool {
+        self.expression_may_resolve_typed_array_view_binding_with_depth(expression, 0)
+    }
+
+    fn expression_may_resolve_typed_array_view_binding_with_depth(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> bool {
+        if depth > 6 {
+            return true;
+        }
+        match expression {
+            Expression::Identifier(name) => {
+                if self.has_typed_array_view_binding_for_name(name) {
+                    return true;
+                }
+                if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+                    && self.has_typed_array_view_binding_for_name(&resolved_name)
+                {
+                    return true;
+                }
+                if let Some(value) = self
+                    .state
+                    .speculation
+                    .static_semantics
+                    .local_value_binding(name)
+                    .or_else(|| self.global_value_binding(name))
+                    && !static_expression_matches(value, expression)
+                {
+                    return self
+                        .expression_may_resolve_typed_array_view_binding_with_depth(
+                            value,
+                            depth + 1,
+                        );
+                }
+                false
+            }
+            Expression::New { callee, arguments } => {
+                self.expression_may_be_typed_array_constructor(callee)
+                    && arguments.first().is_some_and(|argument| {
+                        let buffer = match argument {
+                            CallArgument::Expression(expression)
+                            | CallArgument::Spread(expression) => expression,
+                        };
+                        matches!(buffer, Expression::Identifier(name)
+                            if self.resolve_local_resizable_array_buffer_binding_name(name).is_some())
+                    })
+            }
+            Expression::Call { callee, .. } => {
+                matches!(callee.as_ref(), Expression::Identifier(name)
+                    if self.expression_may_be_typed_array_constructor(callee)
+                        || self
+                            .resolve_registered_function_declaration(name)
+                            .is_some_and(|function| {
+                                function.body.iter().any(|statement| match statement {
+                                    Statement::Return(value) => self
+                                        .expression_may_resolve_typed_array_view_binding_with_depth(
+                                            value,
+                                            depth + 1,
+                                        ),
+                                    Statement::Var { value, .. } | Statement::Let { value, .. } => self
+                                        .expression_may_resolve_typed_array_view_binding_with_depth(
+                                            value,
+                                            depth + 1,
+                                        ),
+                                    _ => false,
+                                })
+                            }))
+            }
+            _ => false,
+        }
+    }
+
+    fn expression_may_be_typed_array_constructor(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                if typed_array_builtin_bytes_per_element(name).is_some() {
+                    return true;
+                }
+                if let Some((resolved_name, _)) = self.resolve_current_local_binding(name)
+                    && typed_array_builtin_bytes_per_element(&resolved_name).is_some()
+                {
+                    return true;
+                }
+                self.state
+                    .speculation
+                    .static_semantics
+                    .local_function_binding(name)
+                    .cloned()
+                    .or_else(|| self.backend.global_function_binding(name).cloned())
+                    .is_some_and(|binding| match binding {
+                        LocalFunctionBinding::Builtin(function_name) => {
+                            typed_array_builtin_bytes_per_element(&function_name).is_some()
+                        }
+                        LocalFunctionBinding::User(_) => false,
+                    })
+            }
+            _ => false,
+        }
+    }
+
     fn resolve_iterator_step_typed_array_constructor_bytes_per_element(
         &self,
         expression: &Expression,

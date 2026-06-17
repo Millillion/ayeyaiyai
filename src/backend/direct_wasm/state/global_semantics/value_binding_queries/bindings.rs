@@ -6,6 +6,19 @@ impl GlobalValueService {
         self.value_bindings.get(name)
     }
 
+    pub(in crate::backend::direct_wasm) fn identifier_alias_binding_names(
+        &self,
+        source_name: &str,
+    ) -> Vec<String> {
+        let mut aliases: Vec<String> = self
+            .identifier_alias_bindings
+            .get(source_name)
+            .map(|aliases| aliases.iter().cloned().collect())
+            .unwrap_or_default();
+        aliases.sort();
+        aliases
+    }
+
     pub(in crate::backend::direct_wasm) fn object_binding(
         &self,
         name: &str,

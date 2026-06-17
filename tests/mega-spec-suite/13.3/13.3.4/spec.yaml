@@ -1,0 +1,11 @@
+subclause: "13.3.4"
+title: EvaluatePropertyAccessWithIdentifierKey
+url: https://262.ecma-international.org/16.0/#sec-evaluate-property-access-with-identifier-key
+behaviors:
+  - identifier-key-is-stringvalue
+
+behavior_descriptions:
+  identifier-key-is-stringvalue: |
+    Identifier-key property access creates a reference whose property name is
+    exactly the StringValue of the IdentifierName, including IdentifierName
+    spellings that are not valid IdentifierReference names.

@@ -32,7 +32,7 @@
 //!   program compilation.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::ir::hir::{ArrayElement, CallArgument, Expression, ObjectEntry};
 
@@ -47,10 +47,13 @@ thread_local! {
         RefCell::new(MemoCache::new());
     static STATIC_CALL_RESULT_CACHE: RefCell<MemoCache<StaticCallResultValue>> =
         RefCell::new(MemoCache::new());
+    static MEMBER_CAPTURE_SLOTS_CACHE: RefCell<MemoCache<MemberCaptureSlotsValue>> =
+        RefCell::new(MemoCache::new());
     static MEMO_STATS: RefCell<MemoStats> = RefCell::new(MemoStats::default());
 }
 
 type StaticCallResultValue = Option<(Expression, Option<String>)>;
+type MemberCaptureSlotsValue = Option<BTreeMap<String, String>>;
 
 thread_local! {
     static MATERIALIZE_CACHE: RefCell<MemoCache<Expression>> = RefCell::new(MemoCache::new());
@@ -101,6 +104,8 @@ struct MemoStats {
     function_misses: u64,
     call_hits: u64,
     call_misses: u64,
+    member_capture_hits: u64,
+    member_capture_misses: u64,
     materialize_hits: u64,
     materialize_misses: u64,
     gated_lookups: u64,
@@ -749,6 +754,18 @@ pub(in crate::backend::direct_wasm) fn static_call_result_cache_key(
     expression_context_key(0xca11, callee, Some(arguments), current_function_name)
 }
 
+pub(in crate::backend::direct_wasm) fn member_capture_slots_cache_key(
+    object: &Expression,
+    property: &Expression,
+    current_function_name: Option<&str>,
+) -> Option<u128> {
+    let mut hasher = ExpressionHasher::with_node_budget(0xcaff_5107, MEMO_KEY_NODE_BUDGET);
+    hasher.write_optional_str(current_function_name);
+    hasher.write_expression(object);
+    hasher.write_expression(property);
+    (!hasher.overflowed).then(|| hasher.finish())
+}
+
 pub(in crate::backend::direct_wasm) fn lookup_static_call_result(
     key: u128,
 ) -> Option<StaticCallResultValue> {
@@ -772,6 +789,31 @@ pub(in crate::backend::direct_wasm) fn store_static_call_result(
     value: StaticCallResultValue,
 ) {
     STATIC_CALL_RESULT_CACHE.with(|cache| cache.borrow_mut().store(key, value));
+}
+
+pub(in crate::backend::direct_wasm) fn lookup_member_capture_slots(
+    key: u128,
+) -> Option<MemberCaptureSlotsValue> {
+    MEMBER_CAPTURE_SLOTS_CACHE.with(|cache| {
+        let result = cache.borrow_mut().lookup(key).cloned();
+        if memo_stats_enabled() {
+            MEMO_STATS.with(|stats| {
+                let mut stats = stats.borrow_mut();
+                match result.is_some() {
+                    true => stats.member_capture_hits += 1,
+                    false => stats.member_capture_misses += 1,
+                }
+            });
+        }
+        result
+    })
+}
+
+pub(in crate::backend::direct_wasm) fn store_member_capture_slots(
+    key: u128,
+    value: MemberCaptureSlotsValue,
+) {
+    MEMBER_CAPTURE_SLOTS_CACHE.with(|cache| cache.borrow_mut().store(key, value));
 }
 
 pub(in crate::backend::direct_wasm) fn materialize_cache_key(
@@ -808,6 +850,7 @@ pub(in crate::backend::direct_wasm) fn reset_memo_state() {
     OBJECT_BINDING_CACHE.with(|cache| cache.borrow_mut().entries.clear());
     FUNCTION_BINDING_CACHE.with(|cache| cache.borrow_mut().entries.clear());
     STATIC_CALL_RESULT_CACHE.with(|cache| cache.borrow_mut().entries.clear());
+    MEMBER_CAPTURE_SLOTS_CACHE.with(|cache| cache.borrow_mut().entries.clear());
     MATERIALIZE_CACHE.with(|cache| cache.borrow_mut().entries.clear());
 }
 
@@ -818,13 +861,15 @@ pub(in crate::backend::direct_wasm) fn dump_memo_stats(label: &str) {
     MEMO_STATS.with(|stats| {
         let stats = stats.borrow();
         eprintln!(
-            "memo_stats:{label} object={}h/{}m function={}h/{}m call={}h/{}m materialize={}h/{}m gated={} bumps={}",
+            "memo_stats:{label} object={}h/{}m function={}h/{}m call={}h/{}m member_capture={}h/{}m materialize={}h/{}m gated={} bumps={}",
             stats.object_hits,
             stats.object_misses,
             stats.function_hits,
             stats.function_misses,
             stats.call_hits,
             stats.call_misses,
+            stats.member_capture_hits,
+            stats.member_capture_misses,
             stats.materialize_hits,
             stats.materialize_misses,
             stats.gated_lookups,

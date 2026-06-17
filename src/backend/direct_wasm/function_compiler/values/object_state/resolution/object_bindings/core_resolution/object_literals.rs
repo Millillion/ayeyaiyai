@@ -86,7 +86,7 @@ impl<'a> FunctionCompiler<'a> {
         canonical_binding
     }
 
-    fn resolve_materialized_object_literal_binding(
+    pub(in crate::backend::direct_wasm) fn resolve_materialized_object_literal_binding(
         &self,
         entries: &[ObjectEntry],
     ) -> Option<ObjectValueBinding> {
@@ -123,6 +123,10 @@ impl<'a> FunctionCompiler<'a> {
                         || self.infer_value_kind(value) == Some(StaticValueKind::Bool)
                     {
                         value.clone()
+                    } else if let Some(value) =
+                        self.resolve_simple_array_append_return_argument_static_call_value(value)
+                    {
+                        value
                     } else {
                         self.materialize_static_expression(value)
                     };
@@ -204,6 +208,42 @@ impl<'a> FunctionCompiler<'a> {
         Some(object_binding)
     }
 
+    fn object_literal_data_value_can_use_materialized_binding_without_state(
+        value: &Expression,
+    ) -> bool {
+        match value {
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::This => true,
+            Expression::Member { object, property } => {
+                Self::object_literal_data_value_can_use_materialized_binding_without_state(object)
+                    && Self::object_literal_data_value_can_use_materialized_binding_without_state(
+                        property,
+                    )
+            }
+            _ => false,
+        }
+    }
+
+    fn object_literal_can_use_materialized_binding_without_state(entries: &[ObjectEntry]) -> bool {
+        entries.iter().all(|entry| match entry {
+            ObjectEntry::Data { key, value } => object_entry_is_literal_proto_setter(entry)
+                || (static_property_name_from_expression(key).is_some()
+                    && Self::object_literal_data_value_can_use_materialized_binding_without_state(
+                        value,
+                    )),
+            ObjectEntry::Getter { key, .. } | ObjectEntry::Setter { key, .. } => {
+                static_property_name_from_expression(key).is_some()
+            }
+            ObjectEntry::Spread(_) => false,
+        })
+    }
+
     pub(super) fn resolve_object_literal_expression_binding(
         &self,
         expression: &Expression,
@@ -211,6 +251,11 @@ impl<'a> FunctionCompiler<'a> {
         let Expression::Object(entries) = expression else {
             return None;
         };
+        if Self::object_literal_can_use_materialized_binding_without_state(entries)
+            && let Some(binding) = self.resolve_materialized_object_literal_binding(entries)
+        {
+            return Some(binding);
+        }
         let mut environment = self.snapshot_static_resolution_environment();
         self.resolve_object_binding_entries_with_state(entries, &mut environment)
             .or_else(|| self.resolve_materialized_object_literal_binding(entries))

@@ -1,0 +1,11 @@
+subclause: "13.2.5.3"
+title: "Static Semantics: PropertyNameList"
+url: https://262.ecma-international.org/16.0/#sec-static-semantics-propertynamelist
+behaviors:
+  - property-name-list-ignores-computed-names
+
+behavior_descriptions:
+  property-name-list-ignores-computed-names: |
+    PropertyNameList includes literal property names and omits computed
+    property names, so computed "__proto__" names do not count toward the
+    duplicate literal "__proto__" early error.

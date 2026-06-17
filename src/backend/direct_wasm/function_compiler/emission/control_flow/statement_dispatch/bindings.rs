@@ -1480,6 +1480,8 @@ impl<'a> FunctionCompiler<'a> {
                     return Ok(());
                 }
                 let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
+                let timing = crate::ayy_env_flag!("AYY_TRACE_BINDING_TIMING");
+                let timing_start = timing.then(std::time::Instant::now);
                 let value_local = self.allocate_temp_local();
                 let resolved_store_value = self
                     .static_for_await_iterator_initializer_result(name, value)
@@ -1488,13 +1490,19 @@ impl<'a> FunctionCompiler<'a> {
                         self.static_test262_assert_deep_equal_helper_initializer_result(value)
                     })
                     .or_else(|| self.snapshot_effectful_expression_for_static_store(value))
-                    .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
+                    .or_else(|| self.snapshot_effectful_member_read_for_static_store(value));
+                let after_resolve = timing.then(std::time::Instant::now);
                 let store_value = resolved_store_value.as_ref().unwrap_or(value);
+                let runtime_object_properties_seeded_by_initializer = matches!(value, Expression::Object(entries)
+                        if Self::object_literal_entries_can_seed_runtime_property_values(entries))
+                    || self.simple_user_call_return_object_needs_runtime_seed(value);
                 let scoped_target = self.resolve_with_scope_binding(name)?;
+                let after_scope = timing.then(std::time::Instant::now);
                 if trace {
                     eprintln!("binding_statement:var:start name={name}");
                 }
                 self.emit_binding_initializer_value(name, value)?;
+                let after_emit = timing.then(std::time::Instant::now);
                 if trace {
                     eprintln!("binding_statement:var:after_emit name={name}");
                 }
@@ -1504,6 +1512,7 @@ impl<'a> FunctionCompiler<'a> {
                 } else {
                     None
                 };
+                let after_async_completion = timing.then(std::time::Instant::now);
                 let store_value = async_generator_completion_store_value
                     .as_ref()
                     .unwrap_or(store_value);
@@ -1519,16 +1528,49 @@ impl<'a> FunctionCompiler<'a> {
                     if trace {
                         eprintln!("binding_statement:var:before_store name={name}");
                     }
-                    self.emit_store_identifier_value_local(name, store_value, value_local)?;
+                    if runtime_object_properties_seeded_by_initializer {
+                        self.emit_store_identifier_value_local_with_seeded_runtime_object_properties(
+                            name,
+                            store_value,
+                            value_local,
+                        )?;
+                    } else {
+                        self.emit_store_identifier_value_local(name, store_value, value_local)?;
+                    }
                     if trace {
                         eprintln!("binding_statement:var:after_store name={name}");
                     }
                 }
+                let after_store = timing.then(std::time::Instant::now);
                 self.update_member_function_binding_from_expression(store_value);
+                let after_member = timing.then(std::time::Instant::now);
                 if trace {
                     eprintln!("binding_statement:var:after_member name={name}");
                 }
                 self.update_object_binding_from_expression(store_value);
+                let after_object = timing.then(std::time::Instant::now);
+                if timing {
+                    let now = std::time::Instant::now();
+                    let elapsed =
+                        |start: Option<std::time::Instant>, end: Option<std::time::Instant>| {
+                            start
+                                .map(|start| end.unwrap_or(now).duration_since(start).as_millis())
+                                .unwrap_or(0)
+                        };
+                    eprintln!(
+                        "binding_timing:var name={name} total_ms={} resolve_ms={} scope_ms={} emit_ms={} async_ms={} store_ms={} member_ms={} object_ms={}",
+                        timing_start
+                            .map(|start| now.duration_since(start).as_millis())
+                            .unwrap_or(0),
+                        elapsed(timing_start, after_resolve),
+                        elapsed(after_resolve, after_scope),
+                        elapsed(after_scope, after_emit),
+                        elapsed(after_emit, after_async_completion),
+                        elapsed(after_async_completion, after_store),
+                        elapsed(after_store, after_member),
+                        elapsed(after_member, after_object),
+                    );
+                }
                 if trace {
                     eprintln!("binding_statement:var:done name={name}");
                 }
@@ -1545,7 +1587,7 @@ impl<'a> FunctionCompiler<'a> {
                     .or_else(|| self.static_class_constructor_call_initializer_result(value))
                     .or_else(|| self.static_using_dispose_method_initializer_result(name, value))
                     .or_else(|| self.snapshot_effectful_expression_for_static_store(value))
-                    .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
+                    .or_else(|| self.snapshot_effectful_member_read_for_static_store(value));
                 if trace {
                     eprintln!("binding_statement:let:after_resolve_store name={name}");
                 }
@@ -1704,7 +1746,7 @@ impl<'a> FunctionCompiler<'a> {
                         compound_store_value = self
                             .snapshot_assignment_value_for_static_store(name, value)
                             .or_else(|| {
-                                self.snapshot_effectful_getter_member_read_for_static_store(value)
+                                self.snapshot_effectful_member_read_for_static_store(value)
                             });
                         self.emit_binding_initializer_value(name, value)?;
                     }

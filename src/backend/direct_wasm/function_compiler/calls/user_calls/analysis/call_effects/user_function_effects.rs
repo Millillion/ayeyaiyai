@@ -35,6 +35,33 @@ fn collect_member_delete_targets_from_statement(
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn cached_user_function_call_effect_nonlocal_bindings(
+        &self,
+        function_name: &str,
+    ) -> Option<HashSet<String>> {
+        let generation = crate::backend::direct_wasm::memo::static_state_generation();
+        let mut cache = self.call_effect_nonlocal_bindings_cache.borrow_mut();
+        if cache.0 != generation {
+            cache.0 = generation;
+            cache.1.clear();
+        }
+        cache.1.get(function_name).cloned()
+    }
+
+    fn store_user_function_call_effect_nonlocal_bindings(
+        &self,
+        function_name: &str,
+        names: &HashSet<String>,
+    ) {
+        let generation = crate::backend::direct_wasm::memo::static_state_generation();
+        let mut cache = self.call_effect_nonlocal_bindings_cache.borrow_mut();
+        if cache.0 != generation {
+            cache.0 = generation;
+            cache.1.clear();
+        }
+        cache.1.insert(function_name.to_string(), names.clone());
+    }
+
     fn argument_expression_cannot_introduce_call_effects(expression: &Expression) -> bool {
         match expression {
             Expression::Number(_)
@@ -361,6 +388,11 @@ impl<'a> FunctionCompiler<'a> {
         function_name: &str,
         visited: &mut HashSet<String>,
     ) -> HashSet<String> {
+        if let Some(cached) = self.cached_user_function_call_effect_nonlocal_bindings(function_name)
+        {
+            return cached;
+        }
+        let cache_result = visited.is_empty();
         if !visited.insert(function_name.to_string()) {
             return HashSet::new();
         }
@@ -385,6 +417,9 @@ impl<'a> FunctionCompiler<'a> {
             .user_function_parameter_iterator_consumption_indices(user_function)
             .is_empty()
         {
+            if cache_result {
+                self.store_user_function_call_effect_nonlocal_bindings(function_name, &names);
+            }
             return names;
         }
         for statement in &function.body {
@@ -394,6 +429,9 @@ impl<'a> FunctionCompiler<'a> {
                 &mut names,
                 visited,
             );
+        }
+        if cache_result {
+            self.store_user_function_call_effect_nonlocal_bindings(function_name, &names);
         }
         names
     }

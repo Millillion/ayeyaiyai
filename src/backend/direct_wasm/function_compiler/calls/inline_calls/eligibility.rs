@@ -1880,11 +1880,22 @@ impl<'a> FunctionCompiler<'a> {
         function_name: &str,
         visited_functions: &mut HashSet<String>,
     ) -> bool {
+        let cache_result = visited_functions.is_empty();
+        if cache_result
+            && let Some(result) = self
+                .user_function_private_member_access_cache
+                .borrow()
+                .get(function_name)
+                .copied()
+        {
+            return result;
+        }
         if !visited_functions.insert(function_name.to_string()) {
             return false;
         }
 
-        self.resolve_registered_function_declaration(function_name)
+        let result = self
+            .resolve_registered_function_declaration(function_name)
             .is_some_and(|function| {
                 let mut local_function_aliases = HashMap::new();
                 for statement in &function.body {
@@ -1901,7 +1912,13 @@ impl<'a> FunctionCompiler<'a> {
                             visited_functions,
                         )
                 })
-            })
+            });
+        if cache_result {
+            self.user_function_private_member_access_cache
+                .borrow_mut()
+                .insert(function_name.to_string(), result);
+        }
+        result
     }
 
     fn statement_mentions_direct_eval(statement: &Statement) -> bool {
@@ -2057,13 +2074,26 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         user_function: &UserFunction,
     ) -> bool {
-        self.resolve_registered_function_declaration(&user_function.name)
+        if let Some(result) = self
+            .user_function_direct_eval_cache
+            .borrow()
+            .get(&user_function.name)
+            .copied()
+        {
+            return result;
+        }
+        let result = self
+            .resolve_registered_function_declaration(&user_function.name)
             .is_some_and(|function| {
                 function
                     .body
                     .iter()
                     .any(Self::statement_mentions_direct_eval)
-            })
+            });
+        self.user_function_direct_eval_cache
+            .borrow_mut()
+            .insert(user_function.name.clone(), result);
+        result
     }
 
     pub(in crate::backend::direct_wasm) fn inline_safe_argument_expression(

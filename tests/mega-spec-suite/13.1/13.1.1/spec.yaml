@@ -1,0 +1,57 @@
+subclause: "13.1.1"
+title: "Static Semantics: Early Errors"
+url: https://262.ecma-international.org/16.0/#sec-identifiers-static-semantics-early-errors
+behaviors:
+  - strict-binding-eval-arguments
+  - strict-yield
+  - module-await
+  - binding-yield-parameter
+  - binding-await-parameter
+  - identifier-yield-parameter-stringvalue
+  - identifier-await-parameter-stringvalue
+  - strict-future-reserved-identifiers
+  - module-await-identifier
+  - reserved-word-stringvalue
+  - reserved-word-unicode-escape-normalization
+
+behavior_descriptions:
+  strict-binding-eval-arguments: |
+    Strict-mode BindingIdentifier productions named eval or arguments are
+    syntax errors.
+
+  strict-yield: |
+    Strict-mode yield as IdentifierReference, BindingIdentifier, or
+    LabelIdentifier is a syntax error.
+
+  module-await: |
+    Module goal await as IdentifierReference, BindingIdentifier, or
+    LabelIdentifier is a syntax error.
+
+  binding-yield-parameter: |
+    BindingIdentifier yield with the [Yield] parameter is a syntax error.
+
+  binding-await-parameter: |
+    BindingIdentifier await with the [Await] parameter is a syntax error.
+
+  identifier-yield-parameter-stringvalue: |
+    IdentifierReference, BindingIdentifier, or LabelIdentifier with the [Yield]
+    parameter rejects Identifier whose StringValue is yield.
+
+  identifier-await-parameter-stringvalue: |
+    IdentifierReference, BindingIdentifier, or LabelIdentifier with the [Await]
+    parameter rejects Identifier whose StringValue is await.
+
+  strict-future-reserved-identifiers: |
+    Strict mode rejects implements, interface, let, package, private,
+    protected, public, static, and yield as IdentifierName StringValues.
+
+  module-await-identifier: |
+    Module goal rejects IdentifierName whose StringValue is await.
+
+  reserved-word-stringvalue: |
+    IdentifierName whose StringValue matches a ReservedWord other than yield or
+    await is a syntax error.
+
+  reserved-word-unicode-escape-normalization: |
+    Unicode escapes cannot disguise reserved words because early errors compare
+    normalized StringValue.

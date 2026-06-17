@@ -10,7 +10,7 @@ use super::{
     },
     declarations::{
         BindingRestrictions, is_await_like_identifier, is_yield_like_identifier,
-        validate_declaration_syntax, validate_for_head_syntax_with_restrictions,
+        validate_declaration_syntax_with_restrictions, validate_for_head_syntax_with_restrictions,
         validate_pattern_syntax_with_restrictions,
         validate_using_declaration_syntax_with_restrictions,
         validate_variable_declaration_syntax_with_restrictions,
@@ -26,7 +26,7 @@ pub(crate) fn validate_statement_syntax(
     validate_statement_control_flow(statement)
 }
 
-pub(super) fn validate_statement_syntax_with_restrictions(
+pub(crate) fn validate_statement_syntax_with_restrictions(
     statement: &Stmt,
     file: &swc_common::SourceFile,
     restrictions: BindingRestrictions,
@@ -48,36 +48,36 @@ pub(super) fn validate_statement_syntax_with_restrictions(
             }
             Decl::Fn(function_declaration) => {
                 ensure!(
-                    !(restrictions.await_reserved
+                    !(restrictions.reserves_await_identifier()
                         && is_await_like_identifier(function_declaration.ident.sym.as_ref())),
-                    "`await` cannot be used as a binding identifier in an async function"
+                    "`await` cannot be used as a binding identifier in this context"
                 );
                 ensure!(
                     !(restrictions.yield_reserved
                         && is_yield_like_identifier(function_declaration.ident.sym.as_ref())),
                     "`yield` cannot be used as a binding identifier in a generator function"
                 );
-                validate_declaration_syntax(declaration, file)?
+                validate_declaration_syntax_with_restrictions(declaration, file, restrictions)?
             }
             Decl::Class(class_declaration) => {
                 ensure!(
-                    !(restrictions.await_reserved
+                    !(restrictions.reserves_await_identifier()
                         && is_await_like_identifier(class_declaration.ident.sym.as_ref())),
-                    "`await` cannot be used as a binding identifier in an async function"
+                    "`await` cannot be used as a binding identifier in this context"
                 );
                 ensure!(
                     !(restrictions.yield_reserved
                         && is_yield_like_identifier(class_declaration.ident.sym.as_ref())),
                     "`yield` cannot be used as a binding identifier in a generator function"
                 );
-                validate_declaration_syntax(declaration, file)?
+                validate_declaration_syntax_with_restrictions(declaration, file, restrictions)?
             }
             Decl::Using(using_declaration) => validate_using_declaration_syntax_with_restrictions(
                 using_declaration,
                 file,
                 restrictions,
             )?,
-            _ => validate_declaration_syntax(declaration, file)?,
+            _ => validate_declaration_syntax_with_restrictions(declaration, file, restrictions)?,
         },
         Stmt::Expr(expression) => {
             validate_expression_statement_lookahead(expression, file)?;
@@ -206,9 +206,9 @@ pub(super) fn validate_statement_syntax_with_restrictions(
         }
         Stmt::Labeled(statement) => {
             ensure!(
-                !(restrictions.await_reserved
+                !(restrictions.reserves_await_identifier()
                     && is_await_like_identifier(statement.label.sym.as_ref())),
-                "`await` cannot be used as a label in an async function"
+                "`await` cannot be used as a label in this context"
             );
             ensure!(
                 !(restrictions.yield_reserved

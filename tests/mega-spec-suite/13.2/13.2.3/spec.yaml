@@ -1,0 +1,22 @@
+subclause: "13.2.3"
+title: Literals
+url: https://262.ecma-international.org/16.0/#sec-primary-expression-literals
+behaviors:
+  - null-literal-evaluates-null
+  - boolean-literals-evaluate-booleans
+  - numeric-literals-evaluate-numericvalue
+  - string-literals-evaluate-sv
+
+behavior_descriptions:
+  null-literal-evaluates-null: |
+    Literal : NullLiteral evaluates to the ECMAScript null value.
+
+  boolean-literals-evaluate-booleans: |
+    Literal : BooleanLiteral evaluates false to false and true to true.
+
+  numeric-literals-evaluate-numericvalue: |
+    Literal : NumericLiteral evaluates to the NumericValue defined for that
+    NumericLiteral.
+
+  string-literals-evaluate-sv: |
+    Literal : StringLiteral evaluates to the SV defined for that StringLiteral.

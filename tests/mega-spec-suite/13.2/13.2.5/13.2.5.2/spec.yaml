@@ -1,0 +1,11 @@
+subclause: "13.2.5.2"
+title: "Static Semantics: IsComputedPropertyKey"
+url: https://262.ecma-international.org/16.0/#sec-static-semantics-iscomputedpropertykey
+behaviors:
+  - computed-proto-key-is-data-property
+
+behavior_descriptions:
+  computed-proto-key-is-data-property: |
+    A literal "__proto__" property name is not computed and can be the special
+    prototype setter, while a computed ["__proto__"] property name is computed
+    and creates an ordinary data property.

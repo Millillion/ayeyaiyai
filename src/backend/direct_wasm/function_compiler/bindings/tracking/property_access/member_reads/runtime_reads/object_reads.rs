@@ -32,6 +32,178 @@ impl Drop for ObjectBindingMemberReadValueGuard {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn static_data_member_read_shadow_owner_name(&self, object: &Expression) -> Option<String> {
+        match object {
+            Expression::Identifier(name) => {
+                self.runtime_object_property_shadow_owner_name_for_identifier(name)
+            }
+            Expression::This => {
+                self.runtime_object_property_shadow_owner_name_for_identifier("this")
+            }
+            Expression::Member {
+                object: base_object,
+                property: base_property,
+            } => {
+                let base_owner = match base_object.as_ref() {
+                    Expression::Identifier(name) => {
+                        self.runtime_object_property_shadow_owner_name_for_identifier(name)
+                    }
+                    Expression::This => {
+                        self.runtime_object_property_shadow_owner_name_for_identifier("this")
+                    }
+                    _ => None,
+                }?;
+                let base_property = self
+                    .resolve_property_key_expression(base_property)
+                    .unwrap_or_else(|| self.materialize_static_expression(base_property));
+                let base_property = self.canonical_object_property_expression(&base_property);
+                let member_owner =
+                    Self::runtime_object_member_shadow_owner_name(&base_owner, &base_property);
+                self.runtime_object_property_shadow_owner_has_bindings(&member_owner)
+                    .then_some(member_owner)
+            }
+            _ => None,
+        }
+    }
+
+    fn static_data_member_read_primitive_value(&self, value: &Expression) -> Option<Expression> {
+        let value = self
+            .resolve_static_primitive_expression_with_context(value, self.current_function_name())
+            .unwrap_or_else(|| value.clone());
+        matches!(
+            self.infer_value_kind(&value),
+            Some(
+                StaticValueKind::Number
+                    | StaticValueKind::Bool
+                    | StaticValueKind::String
+                    | StaticValueKind::BigInt
+                    | StaticValueKind::Null
+                    | StaticValueKind::Undefined
+                    | StaticValueKind::Symbol
+            )
+        )
+        .then_some(value)
+    }
+
+    fn runtime_object_property_shadow_names_for_owner_property(
+        owner_name: &str,
+        property: &Expression,
+    ) -> (String, String) {
+        let shadow_name = format!(
+            "__ayy_object_property__{owner_name}__{}",
+            Self::runtime_object_property_shadow_key(property)
+        );
+        let deleted_name = Self::runtime_object_property_deleted_shadow_name(owner_name, property);
+        (shadow_name, deleted_name)
+    }
+
+    fn runtime_object_property_shadow_name_exists(&self, name: &str) -> bool {
+        self.global_has_implicit_binding(name)
+            || self
+                .backend
+                .shared_global_semantics
+                .global_names()
+                .implicit_bindings
+                .contains_key(name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_static_object_binding_data_member_read(
+        &mut self,
+        object: &Expression,
+        property: &Expression,
+    ) -> DirectResult<bool> {
+        let trace_member_reads = crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS");
+        if self.is_private_member_read_property(property) {
+            return Ok(false);
+        }
+        if !matches!(property, Expression::String(_) | Expression::Number(_))
+            && self.resolve_property_key_expression(property).is_none()
+        {
+            return Ok(false);
+        }
+
+        let Some(object_binding) = self.resolve_object_binding_from_expression(object) else {
+            if trace_member_reads {
+                eprintln!(
+                    "static_data_member_read:reject_no_object_binding object={object:?} property={property:?}"
+                );
+            }
+            return Ok(false);
+        };
+        let canonical_property = self.canonical_object_property_expression(property);
+        let Some(value) = self
+            .resolve_object_binding_property_value(&object_binding, &canonical_property)
+            .or_else(|| self.resolve_object_binding_property_value(&object_binding, property))
+        else {
+            if trace_member_reads {
+                eprintln!(
+                    "static_data_member_read:reject_no_value object={object:?} property={property:?}"
+                );
+            }
+            return Ok(false);
+        };
+        let value = if inline_summary_side_effect_free_expression(&value) {
+            value
+        } else if let Some(primitive_value) = self.static_data_member_read_primitive_value(&value) {
+            primitive_value
+        } else {
+            if trace_member_reads {
+                eprintln!(
+                    "static_data_member_read:reject_effectful object={object:?} property={property:?} value={value:?}"
+                );
+            }
+            return Ok(false);
+        };
+
+        if let Some(owner_name) = self.static_data_member_read_shadow_owner_name(object) {
+            let (shadow_name, deleted_name) =
+                Self::runtime_object_property_shadow_names_for_owner_property(
+                    &owner_name,
+                    &canonical_property,
+                );
+            let shadow_exists = self.runtime_object_property_shadow_name_exists(&shadow_name);
+            let deleted_exists = self.backend.delete_shadow_was_emitted(&deleted_name)
+                || self.runtime_object_property_shadow_deletion_is_statically_present(
+                    object,
+                    &canonical_property,
+                );
+            if shadow_exists || deleted_exists {
+                if !deleted_exists {
+                    let binding = self.runtime_object_property_shadow_binding_by_property(
+                        &owner_name,
+                        &canonical_property,
+                    );
+                    if self.runtime_object_property_shadow_value_is_statically_present_for_owner(
+                        &owner_name,
+                        &canonical_property,
+                    ) {
+                        self.push_global_get(binding.value_index);
+                        return Ok(true);
+                    }
+                    self.push_global_get(binding.present_index);
+                    self.state.emission.output.instructions.push(0x04);
+                    self.state.emission.output.instructions.push(I32_TYPE);
+                    self.push_control_frame();
+                    self.push_global_get(binding.value_index);
+                    self.state.emission.output.instructions.push(0x05);
+                    self.emit_numeric_expression(&value)?;
+                    self.state.emission.output.instructions.push(0x0b);
+                    self.pop_control_frame();
+                    return Ok(true);
+                }
+                if trace_member_reads {
+                    eprintln!(
+                        "static_data_member_read:reject_live_shadow object={object:?} property={property:?} owner={owner_name} shadow_exists={shadow_exists} deleted_exists={deleted_exists} value={value:?}"
+                    );
+                }
+                return Ok(false);
+            }
+        }
+
+        self.emit_numeric_expression(&value)?;
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_runtime_property_key_match_from_local(
         &mut self,
         property_local: u32,
@@ -58,6 +230,13 @@ impl<'a> FunctionCompiler<'a> {
         if let Some(owner_name) = owner_name {
             let binding =
                 self.runtime_object_property_shadow_binding_by_property(owner_name, existing_key);
+            if self.runtime_object_property_shadow_value_is_statically_present_for_owner(
+                owner_name,
+                existing_key,
+            ) {
+                self.push_global_get(binding.value_index);
+                return Ok(());
+            }
             let deleted_binding = self.runtime_object_property_shadow_deleted_binding_by_property(
                 owner_name,
                 existing_key,
@@ -107,6 +286,12 @@ impl<'a> FunctionCompiler<'a> {
                             self.current_function_name(),
                         )
                     {
+                        if let Some(number) =
+                            self.resolve_fast_static_number_expression(&return_value, 0)
+                        {
+                            self.emit_numeric_expression(&Expression::Number(number))?;
+                            return Ok(());
+                        }
                         let return_value = if self
                             .resolve_static_boxed_primitive_value(&return_value)
                             .is_some()
@@ -431,6 +616,38 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         let is_private_property = self.is_private_member_read_property(property);
+        let canonical_property = self.canonical_object_property_expression(property);
+        if !static_expression_matches(&canonical_property, property)
+            && (static_property_name_from_expression(&canonical_property).is_some()
+                || matches!(canonical_property, Expression::Number(_)))
+            && let Some(value) =
+                self.resolve_object_binding_property_value(&object_binding, &canonical_property)
+        {
+            let Some(_value_guard) =
+                ObjectBindingMemberReadValueGuard::enter(object, &canonical_property, &value)
+            else {
+                return Ok(false);
+            };
+            if is_private_property {
+                let value_local = self.allocate_temp_local();
+                if !self.emit_private_brand_marker_runtime_value(
+                    object,
+                    &canonical_property,
+                    &value,
+                )? {
+                    self.emit_numeric_expression(&value)?;
+                }
+                self.push_local_set(value_local);
+                self.emit_private_member_binding_value_from_local(
+                    object,
+                    &canonical_property,
+                    value_local,
+                )?;
+                return Ok(true);
+            }
+            self.emit_numeric_expression(&value)?;
+            return Ok(true);
+        }
         if !is_private_property && static_property_name_from_expression(property).is_none() {
             if self.emit_dynamic_runtime_string_descriptor_member_read(
                 object,
@@ -508,6 +725,21 @@ impl<'a> FunctionCompiler<'a> {
             let capture_slots = self.resolve_member_function_capture_slots(object, property);
             match function_binding {
                 LocalFunctionBinding::User(function_name) => {
+                    let static_getter_binding = LocalFunctionBinding::User(function_name.clone());
+                    let static_this_expression =
+                        self.resolve_static_snapshot_this_expression(object);
+                    if let Some(return_value) = self
+                        .resolve_static_getter_value_from_binding_with_context(
+                            &static_getter_binding,
+                            &static_this_expression,
+                            self.current_function_name(),
+                        )
+                        && let Some(number) =
+                            self.resolve_fast_static_number_expression(&return_value, 0)
+                    {
+                        self.emit_numeric_expression(&Expression::Number(number))?;
+                        return Ok(true);
+                    }
                     self.emit_member_getter_call_with_bound_this(
                         &function_name,
                         object,
@@ -521,6 +753,17 @@ impl<'a> FunctionCompiler<'a> {
                     }
                 }
             }
+            return Ok(true);
+        }
+
+        if !is_private_property
+            && let Some(descriptor) = object_binding_lookup_descriptor(&object_binding, property)
+            && (descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some())
+        {
+            self.emit_runtime_object_descriptor_member_value(object, property, descriptor)?;
             return Ok(true);
         }
 

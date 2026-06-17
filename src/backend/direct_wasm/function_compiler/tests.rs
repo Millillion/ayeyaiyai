@@ -1630,6 +1630,7 @@ fn prepared_start_path_materializes_direct_eval_new_target_field_member_as_undef
     .expect("top-level entry state should prepare");
 
     let mut ordered_user_function_names = Vec::new();
+    let mut assigned_nonlocal_bindings_by_function = HashMap::new();
     let mut assigned_nonlocal_binding_results = HashMap::new();
     let mut user_function_metadata = HashMap::new();
     for declaration in &program.functions {
@@ -1647,6 +1648,10 @@ fn prepared_start_path_materializes_direct_eval_new_target_field_member_as_undef
         );
         let assigned_nonlocal_bindings =
             compiler.collect_user_function_assigned_nonlocal_bindings(&user_function);
+        if !assigned_nonlocal_bindings.is_empty() {
+            assigned_nonlocal_bindings_by_function
+                .insert(declaration.name.clone(), assigned_nonlocal_bindings.clone());
+        }
         let prepared_results =
             compiler.capture_assigned_nonlocal_binding_results(&assigned_nonlocal_bindings);
         if !prepared_results.is_empty() {
@@ -1654,6 +1659,7 @@ fn prepared_start_path_materializes_direct_eval_new_target_field_member_as_undef
         }
     }
     let analysis = PreparedProgramAnalysis::new(
+        assigned_nonlocal_bindings_by_function,
         assigned_nonlocal_binding_results,
         user_function_metadata,
         ordered_user_function_names,

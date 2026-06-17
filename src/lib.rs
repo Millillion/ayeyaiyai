@@ -36,13 +36,32 @@ pub fn compile_file_with_goal_and_strict(
     module: bool,
     force_strict: bool,
 ) -> Result<()> {
+    let trace_timing = ayy_env_flag!("AYY_TRACE_COMPILE_TIMING");
+    let timing_start = trace_timing.then(std::time::Instant::now);
+    let mut timing_last = timing_start;
+    let mut trace_step = |step: &str| {
+        if let Some(previous) = timing_last {
+            let now = std::time::Instant::now();
+            let total_ms = timing_start
+                .map(|start| now.duration_since(start).as_millis())
+                .unwrap_or(0);
+            eprintln!(
+                "compile_file_timing step={step} elapsed_ms={} total_ms={total_ms}",
+                now.duration_since(previous).as_millis()
+            );
+            timing_last = Some(now);
+        }
+    };
     let program = if module {
         frontend::bundle_module_entry(path)?
     } else {
         frontend::bundle_script_entry_with_strict(path, force_strict)?
     };
+    trace_step("parse_bundle");
     let program = ir::pipeline::prepare(program)?;
+    trace_step("ir_prepare");
     if backend::compile_if_supported(&program, options)? {
+        trace_step("backend_compile_write");
         return Ok(());
     }
 

@@ -46,6 +46,35 @@ impl<'a> FunctionCompiler<'a> {
         value_expression: &Expression,
         value_local: u32,
     ) -> DirectResult<()> {
+        self.emit_store_identifier_value_local_with_initializer_shadow_state(
+            name,
+            value_expression,
+            value_local,
+            false,
+        )
+    }
+
+    pub(in crate::backend::direct_wasm) fn emit_store_identifier_value_local_with_seeded_runtime_object_properties(
+        &mut self,
+        name: &str,
+        value_expression: &Expression,
+        value_local: u32,
+    ) -> DirectResult<()> {
+        self.emit_store_identifier_value_local_with_initializer_shadow_state(
+            name,
+            value_expression,
+            value_local,
+            true,
+        )
+    }
+
+    fn emit_store_identifier_value_local_with_initializer_shadow_state(
+        &mut self,
+        name: &str,
+        value_expression: &Expression,
+        value_local: u32,
+        runtime_object_properties_seeded_by_initializer: bool,
+    ) -> DirectResult<()> {
         if self.assignment_targets_immutable_class_binding(name) {
             self.emit_named_error_throw("TypeError")?;
             return Ok(());
@@ -62,7 +91,12 @@ impl<'a> FunctionCompiler<'a> {
             .deleted_builtin_identifiers
             .remove(name);
         let prepared = self.prepare_identifier_value_store(name, value_expression);
-        let result = self.store_prepared_identifier_value_local(name, value_local, prepared);
+        let result = self.store_prepared_identifier_value_local_with_initializer_shadow_state(
+            name,
+            value_local,
+            prepared,
+            runtime_object_properties_seeded_by_initializer,
+        );
         if result.is_ok() {
             self.state
                 .emission

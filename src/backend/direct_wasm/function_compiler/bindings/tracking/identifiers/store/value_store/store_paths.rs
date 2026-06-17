@@ -77,6 +77,7 @@ struct PreparedIdentifierStoreState {
     resolved_local_binding: Option<(String, u32)>,
     returned_descriptor_binding: Option<PropertyDescriptorBinding>,
     opaque_runtime_value: bool,
+    runtime_object_properties_seeded_by_initializer: bool,
     resolved_name: String,
     is_internal_array_iterator_binding: bool,
     is_internal_array_step_binding: bool,
@@ -97,6 +98,86 @@ fn state_stores_fresh_null_prototype_object(state: &PreparedIdentifierStoreState
         && state.kind == Some(StaticValueKind::Object)
         && state.static_string_value.is_none()
         && state.exact_static_number.is_none()
+}
+
+fn state_stores_static_object_literal_value(state: &PreparedIdentifierStoreState) -> bool {
+    (matches!(state.canonical_value_expression, Expression::Object(_))
+        || matches!(state.tracked_value_expression, Expression::Object(_))
+        || matches!(state.module_assignment_expression, Expression::Object(_)))
+        && state.kind == Some(StaticValueKind::Object)
+        && state.array_binding.is_none()
+}
+
+fn expression_is_object_prototype_member(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Member { object, property }
+            if matches!(object.as_ref(), Expression::Identifier(name) if name == "Object")
+                && matches!(property.as_ref(), Expression::String(name) if name == "prototype")
+    )
+}
+
+fn expression_is_plain_ordinary_object_literal(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Object(entries)
+            if entries
+                .iter()
+                .all(|entry| matches!(entry, ObjectEntry::Data { .. })
+                    && !object_entry_is_literal_proto_setter(entry))
+    )
+}
+
+fn expression_has_literal_proto_setter(expression: &Expression) -> bool {
+    matches!(
+        expression,
+        Expression::Object(entries) if entries.iter().any(object_entry_is_literal_proto_setter)
+    )
+}
+
+fn object_binding_has_only_plain_string_data_descriptors(binding: &ObjectValueBinding) -> bool {
+    binding
+        .property_descriptors
+        .iter()
+        .all(|(property, descriptor)| {
+            let Some(property_name) = static_property_name_from_expression(property) else {
+                return false;
+            };
+            descriptor.configurable
+                && descriptor.enumerable
+                && descriptor.writable == Some(true)
+                && descriptor.getter.is_none()
+                && descriptor.setter.is_none()
+                && !descriptor.has_get
+                && !descriptor.has_set
+                && descriptor.value.as_ref().is_some_and(|value| {
+                    binding
+                        .string_properties
+                        .iter()
+                        .any(|(name, property_value)| {
+                            name == &property_name && property_value == value
+                        })
+                })
+        })
+}
+
+fn state_stores_plain_static_ordinary_object(state: &PreparedIdentifierStoreState) -> bool {
+    state.object_binding.as_ref().is_some_and(|binding| {
+        binding.symbol_properties.is_empty()
+            && binding.non_enumerable_string_properties.is_empty()
+            && object_binding_has_only_plain_string_data_descriptors(binding)
+    }) && state.function_binding.is_none()
+        && state.array_binding.is_none()
+        && state.returned_descriptor_binding.is_none()
+        && !state.opaque_runtime_value
+        && state.kind == Some(StaticValueKind::Object)
+        && !expression_has_literal_proto_setter(&state.canonical_value_expression)
+        && (state
+            .prototype_source_snapshot_expression
+            .as_ref()
+            .is_some_and(expression_is_object_prototype_member)
+            || expression_is_plain_ordinary_object_literal(&state.module_assignment_expression))
+        && matches!(state.module_assignment_expression, Expression::Object(_))
 }
 
 fn is_internal_module_null_prototype_object_name(name: &str) -> bool {
@@ -151,6 +232,11 @@ impl PreparedIdentifierStoreState {
         } else {
             self.prototype_source_expression()
         }
+    }
+
+    fn array_binding_is_runtime_initializer_only(&self) -> bool {
+        matches!(self.canonical_value_expression, Expression::Array(_))
+            && self.object_binding.is_none()
     }
 }
 
@@ -535,6 +621,142 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn try_store_plain_static_ordinary_object_global_fast(
+        &mut self,
+        name: &str,
+        value_local: u32,
+        state: &PreparedIdentifierStoreState,
+        target: &IdentifierReferenceStoreTarget,
+    ) -> DirectResult<bool> {
+        if state.resolved_local_binding.is_some()
+            || self.backend.lexical_global_binding(name).is_some()
+            || self
+                .state
+                .speculation
+                .execution_context
+                .isolated_indirect_eval
+            || !state_stores_plain_static_ordinary_object(state)
+        {
+            return Ok(false);
+        }
+        let global_index = match target {
+            IdentifierReferenceStoreTarget::DeclaredGlobal(global_index) => Some(*global_index),
+            IdentifierReferenceStoreTarget::Current
+                if self
+                    .resolve_user_function_capture_hidden_name(name)
+                    .is_none()
+                    && self.resolve_eval_local_function_hidden_name(name).is_none() =>
+            {
+                self.backend.global_binding_index(name)
+            }
+            _ => None,
+        };
+        let Some(global_index) = global_index else {
+            return Ok(false);
+        };
+        let trace_plain_object_store_timing =
+            crate::ayy_env_flag!("AYY_TRACE_PLAIN_OBJECT_STORE_TIMING");
+        let timing_start = trace_plain_object_store_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "plain_object_store_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
+
+        let object_binding = state
+            .object_binding
+            .as_ref()
+            .expect("plain static object store state must carry an object binding")
+            .clone();
+        trace_step("object_binding_clone");
+        let metadata_assignment_expression = state.module_assignment_expression.clone();
+        trace_step("metadata_expression_clone");
+        self.clear_local_static_metadata_for_global_store(name);
+        trace_step("clear_local_static");
+        self.backend
+            .set_global_binding_kind(name, StaticValueKind::Object);
+        self.backend
+            .shared_global_semantics
+            .set_global_binding_kind(name, StaticValueKind::Object);
+        trace_step("set_kind");
+        self.backend
+            .sync_global_expression_binding(name, Some(metadata_assignment_expression.clone()));
+        self.backend
+            .shared_global_semantics
+            .values
+            .set_value_binding(name.to_string(), metadata_assignment_expression.clone());
+        trace_step("sync_expression");
+        if self.backend.global_array_binding(name).is_some() {
+            self.backend.sync_global_array_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_array_binding(name, None);
+        }
+        trace_step("clear_array");
+        if self.backend.global_arguments_binding(name).is_some()
+            || self
+                .backend
+                .shared_global_semantics
+                .values
+                .arguments_binding(name)
+                .is_some()
+        {
+            self.backend.sync_global_arguments_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .values
+                .sync_arguments_binding(name, None);
+        }
+        trace_step("clear_arguments");
+        if self.backend.global_function_binding(name).is_some()
+            || self
+                .backend
+                .shared_global_semantics
+                .global_functions()
+                .function_binding(name)
+                .is_some()
+        {
+            self.backend.sync_global_function_binding(name, None);
+            self.backend
+                .shared_global_semantics
+                .clear_global_function_binding(name);
+        }
+        trace_step("clear_function");
+        self.backend
+            .sync_global_object_binding(name, Some(object_binding.clone()));
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_object_binding(name, Some(object_binding));
+        trace_step("sync_object");
+        let object_prototype = Self::prototype_member_expression("Object");
+        self.backend
+            .sync_global_object_prototype_expression(name, Some(object_prototype.clone()));
+        self.backend
+            .shared_global_semantics
+            .values
+            .sync_object_prototype_expression(name, Some(object_prototype));
+        trace_step("sync_prototype");
+        self.update_global_property_descriptor_value(name, &metadata_assignment_expression);
+        trace_step("update_descriptor");
+        self.push_local_get(value_local);
+        self.push_global_set(global_index);
+        trace_step("emit_global_set");
+        self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
+        trace_step("sync_runtime_shadows");
+        Ok(true)
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_current_local_binding_by_source_name(
         &self,
         source_name: &str,
@@ -563,12 +785,14 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         prepared: PreparedIdentifierValueStore,
         initialize_declared_global: bool,
+        runtime_object_properties_seeded_by_initializer: bool,
     ) -> DirectResult<()> {
         self.store_prepared_identifier_value_local_with_target(
             name,
             value_local,
             prepared,
             initialize_declared_global,
+            runtime_object_properties_seeded_by_initializer,
             IdentifierReferenceStoreTarget::Current,
         )
     }
@@ -665,9 +889,28 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         prepared: PreparedIdentifierValueStore,
         initialize_declared_global: bool,
+        runtime_object_properties_seeded_by_initializer: bool,
         target: IdentifierReferenceStoreTarget,
     ) -> DirectResult<()> {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
+        let trace_identifier_store_timing =
+            crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE_TIMING");
+        let timing_start = trace_identifier_store_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_timing_step = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "identifier_store_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
+        trace_timing_step("start");
         let PreparedIdentifierValueStore {
             canonical_value_expression,
             tracked_value_expression,
@@ -737,11 +980,14 @@ impl<'a> FunctionCompiler<'a> {
             is_internal_array_iterator_binding,
             is_internal_array_step_binding,
             is_internal_iterator_temp,
+            runtime_object_properties_seeded_by_initializer,
         };
+        trace_timing_step("state");
         if let Some(runtime_value_override) = runtime_value_override {
             self.emit_numeric_expression(&runtime_value_override)?;
             self.push_local_set(value_local);
         }
+        trace_timing_step("runtime_override");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:prepared");
         }
@@ -758,6 +1004,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("fresh_null_proto_fast");
 
         if self.try_store_static_iterator_method_result_fast(name, value_local, &state, &target)? {
             if trace_identifier_store {
@@ -765,6 +1012,21 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("iterator_method_fast");
+
+        if self.try_store_plain_static_ordinary_object_global_fast(
+            name,
+            value_local,
+            &state,
+            &target,
+        )? {
+            if trace_identifier_store {
+                eprintln!("identifier_store:{name}:plain_static_object_global_fast");
+                eprintln!("identifier_store:{name}:done");
+            }
+            return Ok(());
+        }
+        trace_timing_step("plain_static_object_fast");
 
         if self.try_store_identifier_value_via_isolated_indirect_eval_path(
             name,
@@ -777,6 +1039,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("isolated_eval_path");
 
         if let Some((global_index, binding)) = self.immutable_lexical_global_assignment_target(
             name,
@@ -803,6 +1066,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("immutable_lexical_global");
 
         if let Some(parameter_scope_arguments_local) =
             self.parameter_scope_arguments_local_for(name)
@@ -811,6 +1075,7 @@ impl<'a> FunctionCompiler<'a> {
             self.push_local_set(parameter_scope_arguments_local);
             self.update_parameter_scope_arguments_static_metadata(&state);
         }
+        trace_timing_step("parameter_scope_arguments");
 
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:shared_updates:start");
@@ -838,6 +1103,7 @@ impl<'a> FunctionCompiler<'a> {
         {
             self.detach_global_reference_aliases_before_rebind(name, &state);
         }
+        trace_timing_step("detach_global_aliases");
         if target_is_effective_local {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:shared_updates:skipped_effective_local");
@@ -845,6 +1111,7 @@ impl<'a> FunctionCompiler<'a> {
         } else {
             self.apply_identifier_store_shared_updates(value_local, &state)?;
         }
+        trace_timing_step("shared_updates");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:shared_updates:done");
         }
@@ -871,6 +1138,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("immutable_internal_global_self_sync");
 
         if is_internal_assignment_temp(name)
             && state.resolved_local_binding.is_none()
@@ -900,6 +1168,7 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(());
         }
+        trace_timing_step("internal_assignment_temp");
 
         match target {
             IdentifierReferenceStoreTarget::ResolvedLocal(resolved_name, local_index) => {
@@ -981,6 +1250,7 @@ impl<'a> FunctionCompiler<'a> {
                 )?;
             }
         }
+        trace_timing_step("target_store");
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:done");
         }
@@ -1113,6 +1383,7 @@ impl<'a> FunctionCompiler<'a> {
             value_local,
             prepared,
             false,
+            false,
             target,
         )
     }
@@ -1123,7 +1394,29 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         prepared: PreparedIdentifierValueStore,
     ) -> DirectResult<()> {
-        self.store_prepared_identifier_value_local_with_mode(name, value_local, prepared, false)
+        self.store_prepared_identifier_value_local_with_mode(
+            name,
+            value_local,
+            prepared,
+            false,
+            false,
+        )
+    }
+
+    pub(super) fn store_prepared_identifier_value_local_with_initializer_shadow_state(
+        &mut self,
+        name: &str,
+        value_local: u32,
+        prepared: PreparedIdentifierValueStore,
+        runtime_object_properties_seeded_by_initializer: bool,
+    ) -> DirectResult<()> {
+        self.store_prepared_identifier_value_local_with_mode(
+            name,
+            value_local,
+            prepared,
+            false,
+            runtime_object_properties_seeded_by_initializer,
+        )
     }
 
     pub(super) fn store_prepared_identifier_value_local_for_initialization(
@@ -1132,6 +1425,12 @@ impl<'a> FunctionCompiler<'a> {
         value_local: u32,
         prepared: PreparedIdentifierValueStore,
     ) -> DirectResult<()> {
-        self.store_prepared_identifier_value_local_with_mode(name, value_local, prepared, true)
+        self.store_prepared_identifier_value_local_with_mode(
+            name,
+            value_local,
+            prepared,
+            true,
+            false,
+        )
     }
 }

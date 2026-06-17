@@ -1,0 +1,24 @@
+subclause: "13.1"
+title: Identifiers
+url: https://262.ecma-international.org/16.0/#sec-identifiers
+behaviors:
+  - identifier-reference-yield-await-contexts
+  - binding-identifier-yield-await-syntax
+  - label-identifier-yield-await-contexts
+  - identifier-excludes-reserved-word
+
+behavior_descriptions:
+  identifier-reference-yield-await-contexts: |
+    IdentifierReference accepts yield only outside [Yield] contexts and await
+    only outside [Await] contexts.
+
+  binding-identifier-yield-await-syntax: |
+    BindingIdentifier grammar admits Identifier, yield, and await, leaving
+    contextual restrictions to static semantics.
+
+  label-identifier-yield-await-contexts: |
+    LabelIdentifier accepts yield only outside [Yield] contexts and await only
+    outside [Await] contexts.
+
+  identifier-excludes-reserved-word: |
+    Identifier is an IdentifierName that is not a ReservedWord.

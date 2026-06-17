@@ -2,14 +2,30 @@ use super::super::*;
 use super::{
     bindings::{collect_using_decl_bound_names, collect_var_decl_bound_names},
     expressions::validate_expression_syntax_with_restrictions,
-    functions::{validate_class_syntax, validate_function_syntax},
+    functions::{
+        validate_class_syntax_with_restrictions, validate_function_syntax_with_restrictions,
+    },
 };
 
 #[derive(Clone, Copy, Default)]
-pub(super) struct BindingRestrictions {
+pub(crate) struct BindingRestrictions {
     pub(super) await_reserved: bool,
+    pub(super) module_await_reserved: bool,
     pub(super) yield_reserved: bool,
     pub(super) await_expression_forbidden: bool,
+}
+
+impl BindingRestrictions {
+    pub(crate) fn module_goal() -> Self {
+        Self {
+            module_await_reserved: true,
+            ..Self::default()
+        }
+    }
+
+    pub(super) fn reserves_await_identifier(self) -> bool {
+        self.await_reserved || self.module_await_reserved
+    }
 }
 
 pub(super) fn is_await_like_identifier(name: &str) -> bool {
@@ -114,8 +130,9 @@ fn validate_binding_identifier_syntax(
         );
     }
     ensure!(
-        !(restrictions.await_reserved && is_await_like_identifier(identifier.id.sym.as_ref())),
-        "`await` cannot be used as a binding identifier in an async function"
+        !(restrictions.reserves_await_identifier()
+            && is_await_like_identifier(identifier.id.sym.as_ref())),
+        "`await` cannot be used as a binding identifier in this context"
     );
     ensure!(
         !(restrictions.yield_reserved && is_yield_like_identifier(identifier.id.sym.as_ref())),
@@ -129,17 +146,33 @@ pub(crate) fn validate_declaration_syntax(
     declaration: &Decl,
     file: &swc_common::SourceFile,
 ) -> Result<()> {
+    validate_declaration_syntax_with_restrictions(declaration, file, BindingRestrictions::default())
+}
+
+pub(crate) fn validate_declaration_syntax_with_restrictions(
+    declaration: &Decl,
+    file: &swc_common::SourceFile,
+    restrictions: BindingRestrictions,
+) -> Result<()> {
     match declaration {
-        Decl::Fn(function) => validate_function_syntax(&function.function, file)?,
-        Decl::Class(class) => validate_class_syntax(&class.class, file)?,
+        Decl::Fn(function) => {
+            validate_function_syntax_with_restrictions(&function.function, file, restrictions)?
+        }
+        Decl::Class(class) => {
+            validate_class_syntax_with_restrictions(&class.class, file, restrictions)?
+        }
         Decl::Var(variable_declaration) => {
-            validate_variable_declaration_syntax(variable_declaration, file)?;
+            validate_variable_declaration_syntax_with_restrictions(
+                variable_declaration,
+                file,
+                restrictions,
+            )?;
         }
         Decl::Using(using_declaration) => {
             validate_using_declaration_syntax_with_restrictions(
                 using_declaration,
                 file,
-                BindingRestrictions::default(),
+                restrictions,
             )?;
         }
         _ => {}
@@ -287,9 +320,9 @@ pub(super) fn validate_pattern_syntax_with_restrictions(
                             property.key.sym
                         );
                         ensure!(
-                            !(restrictions.await_reserved
+                            !(restrictions.reserves_await_identifier()
                                 && is_await_like_identifier(property.key.sym.as_ref())),
-                            "`await` cannot be used as a binding identifier in an async function"
+                            "`await` cannot be used as a binding identifier in this context"
                         );
                         ensure!(
                             !(restrictions.yield_reserved

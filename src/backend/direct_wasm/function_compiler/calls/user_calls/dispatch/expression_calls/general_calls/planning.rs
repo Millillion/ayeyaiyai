@@ -9,6 +9,7 @@ pub(super) struct GeneralUserFunctionCallPlan {
     pub(super) additional_call_effect_nonlocal_bindings: HashSet<String>,
     pub(super) assigned_nonlocal_binding_results: Option<HashMap<String, Expression>>,
     pub(super) updated_bindings: Option<HashMap<String, Expression>>,
+    pub(super) static_result: Option<Expression>,
     pub(super) skip_static_argument_member_writebacks: bool,
 }
 
@@ -21,7 +22,10 @@ impl<'a> FunctionCompiler<'a> {
         static_this_expression: &Expression,
         enable_static_snapshot: bool,
     ) -> DirectResult<GeneralUserFunctionCallPlan> {
+        let large_static_call_analysis =
+            self.user_function_exceeds_static_call_analysis_budget(user_function);
         let allow_static_snapshot = enable_static_snapshot
+            && !large_static_call_analysis
             && !self.user_function_mentions_private_member_access(user_function)
             && !self
                 .backend
@@ -39,10 +43,15 @@ impl<'a> FunctionCompiler<'a> {
             .any(Self::expression_contains_await_for_user_call_runtime);
         let runtime_only_promise_chain_call = !enable_static_snapshot
             && self.registered_function_body_mentions_promise_like_chain(&user_function.name);
-        let skip_static_call_effect_analysis =
-            runtime_only_parameter_iterator_call || arguments_contain_await;
         let prepared_capture_bindings =
             self.prepare_user_function_capture_bindings(user_function)?;
+        let skip_large_static_call_effect_analysis =
+            large_static_call_analysis && prepared_capture_bindings.is_empty();
+        let runtime_only_without_static_snapshot = !enable_static_snapshot;
+        let skip_static_call_effect_analysis = runtime_only_parameter_iterator_call
+            || arguments_contain_await
+            || runtime_only_without_static_snapshot
+            || skip_large_static_call_effect_analysis;
         let synced_capture_source_bindings =
             self.synced_prepared_user_function_capture_source_bindings(&prepared_capture_bindings);
         let capture_snapshot =
@@ -109,11 +118,15 @@ impl<'a> FunctionCompiler<'a> {
         crate::backend::direct_wasm::memo::bump_static_state_generation();
 
         let assigned_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
+            self.prepared_user_function_assigned_nonlocal_bindings(user_function)
         } else {
             self.collect_user_function_assigned_nonlocal_bindings(user_function)
         };
-        let mut call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
+        let mut call_effect_nonlocal_bindings = if skip_large_static_call_effect_analysis {
+            assigned_nonlocal_bindings.clone()
+        } else if runtime_only_without_static_snapshot {
+            self.collect_user_function_call_effect_nonlocal_bindings(user_function)
+        } else if skip_static_call_effect_analysis {
             HashSet::new()
         } else {
             self.collect_user_function_call_effect_nonlocal_bindings(user_function)
@@ -132,24 +145,31 @@ impl<'a> FunctionCompiler<'a> {
             self.assigned_nonlocal_binding_results(&user_function.name)
                 .cloned()
         };
-        let mut additional_call_effect_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
-        } else {
-            let mut names = call_effect_nonlocal_bindings
-                .iter()
-                .filter(|name| !synced_capture_source_bindings.contains(*name))
-                .cloned()
-                .collect::<HashSet<_>>();
-            names.extend(self.collect_snapshot_updated_nonlocal_bindings(
-                user_function,
-                updated_bindings.as_ref(),
-            ));
-            names
-        };
+        let mut additional_call_effect_nonlocal_bindings =
+            if skip_large_static_call_effect_analysis || runtime_only_without_static_snapshot {
+                call_effect_nonlocal_bindings
+                    .iter()
+                    .filter(|name| !synced_capture_source_bindings.contains(*name))
+                    .cloned()
+                    .collect::<HashSet<_>>()
+            } else if skip_static_call_effect_analysis {
+                HashSet::new()
+            } else {
+                let mut names = call_effect_nonlocal_bindings
+                    .iter()
+                    .filter(|name| !synced_capture_source_bindings.contains(*name))
+                    .cloned()
+                    .collect::<HashSet<_>>();
+                names.extend(self.collect_snapshot_updated_nonlocal_bindings(
+                    user_function,
+                    updated_bindings.as_ref(),
+                ));
+                names
+            };
         additional_call_effect_nonlocal_bindings
             .retain(|name| !synced_capture_source_bindings.contains(name));
         let updated_nonlocal_bindings = if skip_static_call_effect_analysis {
-            HashSet::new()
+            assigned_nonlocal_bindings.clone()
         } else {
             self.collect_user_function_updated_nonlocal_bindings(user_function)
         };
@@ -169,6 +189,7 @@ impl<'a> FunctionCompiler<'a> {
             additional_call_effect_nonlocal_bindings,
             assigned_nonlocal_binding_results,
             updated_bindings,
+            static_result: static_result.map(|(result, _)| result),
             skip_static_argument_member_writebacks: runtime_only_promise_chain_call,
         })
     }

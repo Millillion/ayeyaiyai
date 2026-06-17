@@ -85,6 +85,42 @@ impl Lowerer {
         &mut self,
         function_declaration: &FnDecl,
     ) -> Result<Vec<Statement>> {
+        self.lower_nested_function_declaration_with_top_level_binding(function_declaration, None)
+    }
+
+    pub(crate) fn lower_top_level_module_function_declaration(
+        &mut self,
+        function_declaration: &FnDecl,
+    ) -> Result<Vec<Statement>> {
+        self.register_nested_function_declaration_with_top_level_binding(
+            function_declaration,
+            Some(function_declaration.ident.sym.to_string()),
+        )?;
+        Ok(Vec::new())
+    }
+
+    fn lower_nested_function_declaration_with_top_level_binding(
+        &mut self,
+        function_declaration: &FnDecl,
+        top_level_binding: Option<String>,
+    ) -> Result<Vec<Statement>> {
+        let generated_name = self.register_nested_function_declaration_with_top_level_binding(
+            function_declaration,
+            top_level_binding,
+        )?;
+
+        Ok(vec![Statement::Let {
+            name: self.resolve_binding_name(function_declaration.ident.sym.as_ref()),
+            mutable: true,
+            value: Expression::Identifier(generated_name),
+        }])
+    }
+
+    fn register_nested_function_declaration_with_top_level_binding(
+        &mut self,
+        function_declaration: &FnDecl,
+        top_level_binding: Option<String>,
+    ) -> Result<String> {
         self.next_function_expression_id += 1;
         let generated_name = format!(
             "__ayy_fnstmt_{}_{}",
@@ -95,7 +131,7 @@ impl Lowerer {
             body.push(Statement::Return(Expression::Undefined));
             self.functions.push(FunctionDeclaration {
                 name: generated_name.clone(),
-                top_level_binding: None,
+                top_level_binding,
                 params,
                 body,
                 register_global: false,
@@ -123,11 +159,7 @@ impl Lowerer {
                 private_brand_binding: None,
             });
 
-            return Ok(vec![Statement::Let {
-                name: self.resolve_binding_name(function_declaration.ident.sym.as_ref()),
-                mutable: true,
-                value: Expression::Identifier(generated_name),
-            }]);
+            return Ok(generated_name);
         }
         let kind = lower_function_kind(
             function_declaration.function.is_generator,
@@ -139,7 +171,7 @@ impl Lowerer {
 
         self.functions.push(FunctionDeclaration {
             name: generated_name.clone(),
-            top_level_binding: None,
+            top_level_binding,
             params,
             body,
             register_global: false,
@@ -165,10 +197,6 @@ impl Lowerer {
             private_brand_binding: None,
         });
 
-        Ok(vec![Statement::Let {
-            name: self.resolve_binding_name(function_declaration.ident.sym.as_ref()),
-            mutable: true,
-            value: Expression::Identifier(generated_name),
-        }])
+        Ok(generated_name)
     }
 }

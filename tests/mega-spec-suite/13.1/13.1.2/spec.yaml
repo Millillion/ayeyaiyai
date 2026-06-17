@@ -1,0 +1,33 @@
+subclause: "13.1.2"
+title: "Static Semantics: StringValue"
+url: https://262.ecma-international.org/16.0/#sec-static-semantics-stringvalue
+behaviors:
+  - identifier-name-unescaped-code-points
+  - yield-stringvalue
+  - await-stringvalue
+  - identifier-stringvalue-delegates-to-identifier-name
+  - private-identifier-prefix
+  - module-export-string-literal
+
+behavior_descriptions:
+  identifier-name-unescaped-code-points: |
+    StringValue for IdentifierName is its unescaped identifier code points
+    converted to a string.
+
+  yield-stringvalue: |
+    StringValue for yield as IdentifierReference, BindingIdentifier, or
+    LabelIdentifier is yield.
+
+  await-stringvalue: |
+    StringValue for await as IdentifierReference, BindingIdentifier, or
+    LabelIdentifier is await.
+
+  identifier-stringvalue-delegates-to-identifier-name: |
+    StringValue for Identifier delegates to the contained IdentifierName.
+
+  private-identifier-prefix: |
+    StringValue for PrivateIdentifier is # followed by the IdentifierName
+    StringValue.
+
+  module-export-string-literal: |
+    StringValue for ModuleExportName from a StringLiteral is the literal SV.

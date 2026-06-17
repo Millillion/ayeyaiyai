@@ -1,0 +1,12 @@
+subclause: "13.2.5.5"
+title: "Runtime Semantics: PropertyDefinitionEvaluation"
+url: https://262.ecma-international.org/16.0/#sec-runtime-semantics-propertydefinitionevaluation
+behaviors:
+  - property-definitions-evaluate-and-create-properties
+
+behavior_descriptions:
+  property-definitions-evaluate-and-create-properties: |
+    PropertyDefinitionEvaluation evaluates property definitions left to right,
+    creates data properties for shorthand and named definitions, copies spread
+    data properties, calls method/accessor definition semantics, and applies
+    literal "__proto__" prototype setting instead of creating a data property.

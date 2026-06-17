@@ -161,10 +161,58 @@ impl<'a> FunctionCompiler<'a> {
         })
     }
 
+    pub(in crate::backend::direct_wasm) fn resolve_fast_static_boolean_expression(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<bool> {
+        if depth > 8
+            || !inline_summary_side_effect_free_expression(expression)
+            || Self::expression_contains_assignment_or_update(expression)
+            || Self::expression_contains_call_or_construct(expression)
+        {
+            return None;
+        }
+
+        let Expression::Binary { op, left, right } = expression else {
+            return None;
+        };
+        match op {
+            BinaryOp::LogicalAnd => {
+                let left_value = self.resolve_fast_static_boolean_expression(left, depth + 1)?;
+                if left_value {
+                    self.resolve_fast_static_boolean_expression(right, depth + 1)
+                } else {
+                    Some(false)
+                }
+            }
+            BinaryOp::LogicalOr => {
+                let left_value = self.resolve_fast_static_boolean_expression(left, depth + 1)?;
+                if left_value {
+                    Some(true)
+                } else {
+                    self.resolve_fast_static_boolean_expression(right, depth + 1)
+                }
+            }
+            BinaryOp::Equal | BinaryOp::NotEqual => {
+                if let Some(value) = self.resolve_static_object_identity_boolean(op, left, right) {
+                    return Some(value);
+                }
+                let left_number = self.resolve_fast_static_number_expression(left, 0)?;
+                let right_number = self.resolve_fast_static_number_expression(right, 0)?;
+                Some((left_number == right_number) ^ matches!(op, BinaryOp::NotEqual))
+            }
+            _ => None,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_static_boolean_expression(
         &self,
         expression: &Expression,
     ) -> Option<bool> {
+        if let Some(value) = self.resolve_fast_static_boolean_expression(expression, 0) {
+            return Some(value);
+        }
         if self.boolean_expression_reads_runtime_nonlocal_binding(expression) {
             return None;
         }

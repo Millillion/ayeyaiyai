@@ -3,9 +3,16 @@ use super::super::{
     StaticResolutionEnvironment,
 };
 use crate::ir::hir::Expression;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 impl FunctionCompiler<'_> {
+    pub(in crate::backend::direct_wasm) fn assigned_nonlocal_bindings(
+        &self,
+        function_name: &str,
+    ) -> Option<&HashSet<String>> {
+        self.assigned_nonlocal_bindings.get(function_name)
+    }
+
     pub(in crate::backend::direct_wasm) fn assigned_nonlocal_binding_results(
         &self,
         function_name: &str,

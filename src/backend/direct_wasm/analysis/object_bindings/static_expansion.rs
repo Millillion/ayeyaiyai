@@ -5,6 +5,42 @@ pub(in crate::backend::direct_wasm) fn object_binding_to_expression(
 ) -> Expression {
     let mut entries = Vec::new();
     for (name, value) in &object_binding.string_properties {
+        let property = Expression::String(name.clone());
+        if object_binding_lookup_descriptor(object_binding, &property).is_some_and(|descriptor| {
+            descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some()
+        }) {
+            continue;
+        }
+        entries.push(ObjectEntry::Data {
+            key: property,
+            value: value.clone(),
+        });
+    }
+    for (property, value) in &object_binding.symbol_properties {
+        if object_binding_lookup_descriptor(object_binding, property).is_some_and(|descriptor| {
+            descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some()
+        }) {
+            continue;
+        }
+        entries.push(ObjectEntry::Data {
+            key: property.clone(),
+            value: value.clone(),
+        });
+    }
+    Expression::Object(entries)
+}
+
+pub(in crate::backend::direct_wasm) fn object_binding_to_expression_with_descriptor_entries(
+    object_binding: &ObjectValueBinding,
+) -> Expression {
+    let mut entries = Vec::new();
+    for (name, value) in &object_binding.string_properties {
         entries.push(ObjectEntry::Data {
             key: Expression::String(name.clone()),
             value: value.clone(),
@@ -15,6 +51,29 @@ pub(in crate::backend::direct_wasm) fn object_binding_to_expression(
             key: property.clone(),
             value: value.clone(),
         });
+    }
+    for (property, descriptor) in &object_binding.property_descriptors {
+        if let Some(getter) = descriptor.getter.as_ref() {
+            entries.push(ObjectEntry::Getter {
+                key: property.clone(),
+                getter: getter.clone(),
+            });
+        }
+        if let Some(setter) = descriptor.setter.as_ref() {
+            entries.push(ObjectEntry::Setter {
+                key: property.clone(),
+                setter: setter.clone(),
+            });
+        }
+        if !descriptor.has_get
+            && !descriptor.has_set
+            && let Some(value) = descriptor.value.as_ref()
+        {
+            entries.push(ObjectEntry::Data {
+                key: property.clone(),
+                value: value.clone(),
+            });
+        }
     }
     Expression::Object(entries)
 }

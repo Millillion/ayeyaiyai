@@ -1,6 +1,26 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn nonlocal_assignment_targets_name(targets: &HashSet<String>, name: &str) -> bool {
+        let source_name = scoped_binding_source_name(name).unwrap_or(name);
+        targets.iter().any(|target| {
+            let target_source_name = scoped_binding_source_name(target).unwrap_or(target);
+            target == name
+                || target == source_name
+                || target_source_name == name
+                || target_source_name == source_name
+        })
+    }
+
+    pub(in crate::backend::direct_wasm) fn current_function_assigns_nonlocal_binding(
+        &self,
+        name: &str,
+    ) -> bool {
+        self.current_function_name()
+            .and_then(|function_name| self.assigned_nonlocal_bindings(function_name))
+            .is_some_and(|targets| Self::nonlocal_assignment_targets_name(targets, name))
+    }
+
     pub(in crate::backend::direct_wasm) fn global_has_binding(&self, name: &str) -> bool {
         self.backend.global_has_binding(name)
     }
@@ -43,6 +63,20 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            let kind = self
+                .infer_value_kind(value)
+                .unwrap_or(StaticValueKind::Unknown);
+            self.clear_global_binding_state(name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_binding_state(name);
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            return;
+        }
         let snapshot_value = self
             .global_value_binding(name)
             .map(|snapshot| substitute_self_referential_binding_snapshot(value, name, snapshot))
@@ -82,21 +116,23 @@ impl<'a> FunctionCompiler<'a> {
                 if matches!(callee.as_ref(), Expression::Identifier(symbol_name)
                     if symbol_name == "Symbol" && self.is_unshadowed_builtin_identifier(symbol_name))
         );
-        let preserve_reference_alias = preserve_private_brand_identifier
-            || (!matches!(metadata_source_value, Expression::Object(_))
-                && self
-                    .resolve_iterator_source_kind(metadata_source_value)
-                    .is_some())
-            || function_binding.is_some()
-            || matches!(&snapshot_value, Expression::Identifier(name) if self.lookup_identifier_kind(name) == Some(StaticValueKind::Symbol))
-            || preserve_symbol_call_binding
-            || (matches!(snapshot_value, Expression::Identifier(_) | Expression::This)
+        let preserves_static_object_or_array_alias =
+            matches!(snapshot_value, Expression::Identifier(_) | Expression::This)
                 && (self
                     .resolve_object_binding_from_expression(metadata_source_value)
                     .is_some()
                     || self
                         .resolve_array_binding_from_expression(metadata_source_value)
-                        .is_some()));
+                        .is_some());
+        let preserve_reference_alias = preserve_private_brand_identifier
+            || function_binding.is_some()
+            || matches!(&snapshot_value, Expression::Identifier(name) if self.lookup_identifier_kind(name) == Some(StaticValueKind::Symbol))
+            || preserve_symbol_call_binding
+            || preserves_static_object_or_array_alias
+            || (!matches!(metadata_source_value, Expression::Object(_))
+                && self
+                    .resolve_iterator_source_kind(metadata_source_value)
+                    .is_some());
         let materialized_value =
             if let Some(template_object_identity_value) = template_object_identity_value.clone() {
                 template_object_identity_value
@@ -112,7 +148,7 @@ impl<'a> FunctionCompiler<'a> {
         let mut kind = self
             .infer_value_kind(metadata_source_value)
             .unwrap_or(StaticValueKind::Unknown);
-        if kind != StaticValueKind::String
+        if kind == StaticValueKind::Unknown
             && !self
                 .runtime_string_print_candidates(metadata_source_value)
                 .is_empty()
@@ -223,6 +259,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&Expression> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_value_binding(name)
     }
 
@@ -230,6 +269,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&ObjectValueBinding> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_object_binding(name)
     }
 
@@ -237,6 +279,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&ArrayValueBinding> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_array_binding(name)
     }
 
@@ -244,6 +289,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&ObjectValueBinding> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_prototype_object_binding(name)
     }
 
@@ -251,6 +299,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&ProxyValueBinding> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_proxy_binding(name)
     }
 
@@ -258,6 +309,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&Expression> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_object_prototype_expression(name)
     }
 
@@ -273,6 +327,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         name: &str,
     ) -> Option<&GlobalObjectRuntimePrototypeBinding> {
+        if self.current_function_assigns_nonlocal_binding(name) {
+            return None;
+        }
         self.backend.global_runtime_prototype_binding(name)
     }
 

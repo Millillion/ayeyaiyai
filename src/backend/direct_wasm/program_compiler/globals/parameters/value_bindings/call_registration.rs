@@ -361,6 +361,11 @@ impl DirectWasmCompiler {
             return Expression::String(text);
         }
 
+        let materialized_without_state = self.materialize_global_expression(&substituted_argument);
+        if self.prepared_parameter_value_argument_is_stable(&materialized_without_state) {
+            return materialized_without_state;
+        }
+
         let materialized =
             self.with_cloned_global_binding_state(|value_bindings, object_bindings| {
                 self.materialize_global_expression_with_state(
@@ -369,7 +374,7 @@ impl DirectWasmCompiler {
                     value_bindings,
                     object_bindings,
                 )
-                .unwrap_or_else(|| self.materialize_global_expression(&substituted_argument))
+                .unwrap_or(materialized_without_state)
             });
 
         if let Some(text) = self.resolve_static_parameter_string_value(&materialized) {

@@ -211,7 +211,7 @@ impl<'a> FunctionCompiler<'a> {
         Ok(())
     }
 
-    fn logical_operand_static_truthiness_after_evaluation(
+    pub(in crate::backend::direct_wasm) fn logical_operand_static_truthiness_after_evaluation(
         &self,
         expression: &Expression,
     ) -> Option<bool> {
@@ -250,6 +250,25 @@ impl<'a> FunctionCompiler<'a> {
                     Some(true)
                 } else {
                     self.resolve_static_boolean_expression(expression)
+                }
+            }
+            Expression::Call { callee, arguments } => {
+                let binding = self.resolve_function_binding_from_expression(callee)?;
+                let argument_expressions = arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) => Some(expression.clone()),
+                        CallArgument::Spread(_) => None,
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                match self.resolve_terminal_function_outcome_from_binding(
+                    &binding,
+                    &argument_expressions,
+                )? {
+                    StaticEvalOutcome::Value(value) => {
+                        self.resolve_static_boolean_expression(&value)
+                    }
+                    StaticEvalOutcome::Throw(_) => None,
                 }
             }
             _ => self.resolve_static_boolean_expression(expression),

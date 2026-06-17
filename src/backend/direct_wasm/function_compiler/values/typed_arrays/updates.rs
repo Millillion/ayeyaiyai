@@ -368,6 +368,17 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         value: &Expression,
     ) -> DirectResult<()> {
+        if !self.expression_may_resolve_typed_array_view_binding(value) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_typed_array_view_binding(name);
+            self.state
+                .speculation
+                .static_semantics
+                .clear_runtime_typed_array_oob_local(name);
+            return Ok(());
+        }
         let Some(binding) = self.resolve_typed_array_view_binding_from_expression(value) else {
             self.state
                 .speculation

@@ -1,6 +1,38 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn expression_may_return_arguments_binding(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Identifier(name) => {
+                let resolved_name = scoped_binding_source_name(name).unwrap_or(name);
+                self.state
+                    .parameters
+                    .local_arguments_bindings
+                    .contains_key(name)
+                    || self
+                        .state
+                        .parameters
+                        .local_arguments_bindings
+                        .contains_key(resolved_name)
+                    || self.backend.global_arguments_binding(name).is_some()
+                    || self
+                        .backend
+                        .global_arguments_binding(resolved_name)
+                        .is_some()
+            }
+            Expression::Call { callee, .. } | Expression::New { callee, .. } => {
+                matches!(
+                    callee.as_ref(),
+                    Expression::Identifier(name)
+                        if self
+                            .resolve_user_function_from_callee_name(name)
+                            .is_some_and(|function| function.returns_arguments_object)
+                )
+            }
+            _ => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn resolve_arguments_callee_strictness(
         &self,
         expression: &Expression,
@@ -23,6 +55,9 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         expression: &Expression,
     ) -> Option<ArgumentsValueBinding> {
+        if !self.expression_may_return_arguments_binding(expression) {
+            return None;
+        }
         match expression {
             Expression::Identifier(name) => {
                 let resolved_name = scoped_binding_source_name(name).unwrap_or(name);

@@ -9,6 +9,7 @@ pub(in crate::backend::direct_wasm) struct GlobalObjectRuntimePrototypeBinding {
 #[derive(Clone, Default)]
 pub(in crate::backend::direct_wasm) struct GlobalValueService {
     pub(in crate::backend::direct_wasm) value_bindings: HashMap<String, Expression>,
+    pub(in crate::backend::direct_wasm) identifier_alias_bindings: HashMap<String, HashSet<String>>,
     pub(in crate::backend::direct_wasm) array_bindings: HashMap<String, ArrayValueBinding>,
     pub(in crate::backend::direct_wasm) arrays_with_runtime_state: HashSet<String>,
     pub(in crate::backend::direct_wasm) resizable_array_buffer_bindings:

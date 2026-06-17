@@ -262,6 +262,24 @@ impl<'a> FunctionCompiler<'a> {
         &self,
         value: &Expression,
     ) -> Vec<(MemberFunctionBindingProperty, LocalFunctionBinding)> {
+        if let Expression::Object(entries) = value {
+            return entries
+                .iter()
+                .filter_map(|entry| {
+                    let crate::ir::hir::ObjectEntry::Data { key, value } = entry else {
+                        return None;
+                    };
+                    let property = self.member_function_binding_property(key)?;
+                    if matches!(property, MemberFunctionBindingProperty::String(_))
+                        || matches!(value, Expression::Sequence(_))
+                    {
+                        return None;
+                    }
+                    let binding = self.resolve_function_binding_from_expression(value)?;
+                    Some((property, binding))
+                })
+                .collect();
+        }
         if matches!(
             value,
             Expression::New { callee, .. }
@@ -270,6 +288,9 @@ impl<'a> FunctionCompiler<'a> {
                     Expression::Identifier(name) if !name.starts_with("__ayy_class_ctor_")
                 )
         ) {
+            return Vec::new();
+        }
+        if !matches!(value, Expression::New { .. }) {
             return Vec::new();
         }
         let Some(object_binding) = self.resolve_object_binding_from_expression(value) else {

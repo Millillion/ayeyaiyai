@@ -443,6 +443,16 @@ impl<'a> FunctionCompiler<'a> {
         if object_binding.runtime_symbol_properties && requested_symbol.is_some() {
             return None;
         }
+        if object_binding_lookup_descriptor(object_binding, &canonical_property).is_some_and(
+            |descriptor| {
+                descriptor.has_get
+                    || descriptor.has_set
+                    || descriptor.getter.is_some()
+                    || descriptor.setter.is_some()
+            },
+        ) {
+            return None;
+        }
         if let Some(value) = object_binding_lookup_value(object_binding, &canonical_property) {
             if Self::expression_is_runtime_object_property_shadow_identifier(value) {
                 return None;

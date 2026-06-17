@@ -258,21 +258,7 @@ impl<'a> FunctionCompiler<'a> {
         expression: &Expression,
     ) -> bool {
         match expression {
-            Expression::Call { callee, arguments }
-            | Expression::SuperCall { callee, arguments }
-            | Expression::New { callee, arguments } => {
-                matches!(callee.as_ref(), Expression::Identifier(name) if self.contains_user_function(name))
-                    || matches!(
-                        self.resolve_function_binding_from_expression(callee),
-                        Some(LocalFunctionBinding::User(_))
-                    )
-                    || self.binary_expression_calls_user_function(callee)
-                    || arguments.iter().any(|argument| match argument {
-                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                            self.binary_expression_calls_user_function(expression)
-                        }
-                    })
-            }
+            Expression::Call { .. } | Expression::SuperCall { .. } | Expression::New { .. } => true,
             Expression::Unary { expression, .. }
             | Expression::Await(expression)
             | Expression::EnumerateKeys(expression)
@@ -627,6 +613,9 @@ impl<'a> FunctionCompiler<'a> {
     }
 
     fn numeric_static_outcome_operand_is_side_effect_free(&self, expression: &Expression) -> bool {
+        if Self::expression_contains_call_or_construct(expression) {
+            return self.static_boxed_primitive_constructor_call_is_side_effect_free(expression);
+        }
         if self.binary_expression_calls_user_function(expression) {
             return false;
         }
@@ -832,6 +821,91 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    pub(in crate::backend::direct_wasm) fn expression_contains_call_or_construct(
+        expression: &Expression,
+    ) -> bool {
+        match expression {
+            Expression::Call { .. } | Expression::SuperCall { .. } | Expression::New { .. } => true,
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression)
+            | Expression::Assign {
+                value: expression, ..
+            } => Self::expression_contains_call_or_construct(expression),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                Self::expression_contains_call_or_construct(object)
+                    || Self::expression_contains_call_or_construct(property)
+                    || Self::expression_contains_call_or_construct(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                Self::expression_contains_call_or_construct(property)
+                    || Self::expression_contains_call_or_construct(value)
+            }
+            Expression::Binary { left, right, .. } => {
+                Self::expression_contains_call_or_construct(left)
+                    || Self::expression_contains_call_or_construct(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                Self::expression_contains_call_or_construct(condition)
+                    || Self::expression_contains_call_or_construct(then_expression)
+                    || Self::expression_contains_call_or_construct(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(Self::expression_contains_call_or_construct),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    Self::expression_contains_call_or_construct(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    Self::expression_contains_call_or_construct(key)
+                        || Self::expression_contains_call_or_construct(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    Self::expression_contains_call_or_construct(key)
+                        || Self::expression_contains_call_or_construct(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    Self::expression_contains_call_or_construct(key)
+                        || Self::expression_contains_call_or_construct(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    Self::expression_contains_call_or_construct(expression)
+                }
+            }),
+            Expression::Member { object, property } => {
+                Self::expression_contains_call_or_construct(object)
+                    || Self::expression_contains_call_or_construct(property)
+            }
+            Expression::SuperMember { property } => {
+                Self::expression_contains_call_or_construct(property)
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn expression_references_internal_assignment_temp(
         expression: &Expression,
     ) -> bool {
@@ -972,6 +1046,134 @@ impl<'a> FunctionCompiler<'a> {
 
     fn static_template_number_to_string(value: f64) -> String {
         js_number_to_string(value)
+    }
+
+    fn static_fresh_data_member_identity_key(
+        &self,
+        expression: &Expression,
+    ) -> Option<(String, String)> {
+        let trace = crate::ayy_env_flag!("AYY_TRACE_OBJECT_IDENTITY");
+        let Expression::Member { object, property } = expression else {
+            if trace {
+                eprintln!("fresh_member_identity:reject_not_member expression={expression:?}");
+            }
+            return None;
+        };
+        if self.member_getter_value_requires_runtime_read_effects(object, property) {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_getter object={object:?} property={property:?}"
+                );
+            }
+            return None;
+        }
+        let canonical_property = self.canonical_object_property_expression(property);
+        let property_name = static_property_name_from_expression(&canonical_property)?;
+        if self.runtime_object_property_shadow_deletion_may_affect_property(
+            object,
+            &canonical_property,
+        ) {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_deleted_shadow object={object:?} property={canonical_property:?}"
+                );
+            }
+            return None;
+        }
+        if let Some(shadow_name) = self
+            .runtime_object_property_shadow_binding_name_for_expression(object, &canonical_property)
+            && self.global_has_implicit_binding(&shadow_name)
+            && !self.runtime_object_property_shadow_binding_has_static_metadata(&shadow_name)
+        {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_dynamic_shadow object={object:?} property={canonical_property:?} shadow={shadow_name}"
+                );
+            }
+            return None;
+        }
+        let Some(object_binding) = self.resolve_object_binding_from_expression(object) else {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_no_object_binding object={object:?} property={canonical_property:?}"
+                );
+            }
+            return None;
+        };
+        let value = if let Some(value) =
+            object_binding_lookup_value(&object_binding, &canonical_property)
+                .or_else(|| object_binding_lookup_value(&object_binding, property))
+        {
+            value
+        } else {
+            let descriptor = object_binding_lookup_descriptor(&object_binding, &canonical_property)
+                .or_else(|| object_binding_lookup_descriptor(&object_binding, property))?;
+            if descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some()
+            {
+                if trace {
+                    eprintln!(
+                        "fresh_member_identity:reject_descriptor_accessor object={object:?} property={canonical_property:?}"
+                    );
+                }
+                return None;
+            }
+            descriptor.value.as_ref()?
+        };
+        if !matches!(
+            value,
+            Expression::Array(_) | Expression::Object(_) | Expression::New { .. }
+        ) {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_not_fresh_value object={object:?} property={canonical_property:?} value={value:?}"
+                );
+            }
+            return None;
+        }
+        let Some(object_key) = self.resolve_static_reference_identity_key(object) else {
+            if trace {
+                eprintln!(
+                    "fresh_member_identity:reject_no_object_key object={object:?} property={canonical_property:?}"
+                );
+            }
+            return None;
+        };
+        if trace {
+            eprintln!(
+                "fresh_member_identity:key object={object:?} property={canonical_property:?} key={object_key} property_name={property_name}"
+            );
+        }
+        Some((object_key, property_name))
+    }
+
+    fn resolve_static_fresh_data_member_identity_boolean(
+        &self,
+        op: BinaryOp,
+        left: &Expression,
+        right: &Expression,
+    ) -> Option<bool> {
+        if !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual) {
+            return None;
+        }
+        if Self::expression_contains_assignment_or_update(left)
+            || Self::expression_contains_assignment_or_update(right)
+            || Self::expression_contains_call_or_construct(left)
+            || Self::expression_contains_call_or_construct(right)
+        {
+            return None;
+        }
+        let left_key = self.static_fresh_data_member_identity_key(left)?;
+        let right_key = self.static_fresh_data_member_identity_key(right)?;
+        let value = (left_key == right_key) ^ matches!(op, BinaryOp::NotEqual);
+        if crate::ayy_env_flag!("AYY_TRACE_OBJECT_IDENTITY") {
+            eprintln!(
+                "fresh_member_identity:result op={op:?} left_key={left_key:?} right_key={right_key:?} value={value}"
+            );
+        }
+        Some(value)
     }
 
     fn emit_static_template_update_addition(
@@ -2151,7 +2353,7 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return false;
         };
-        let Some(shadow_binding_name) = self
+        let Some(_) = self
             .runtime_object_property_shadow_binding_name_for_expression(
                 object,
                 &materialized_property,
@@ -2159,11 +2361,6 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return false;
         };
-        if !self.runtime_object_property_shadow_binding_should_defer_static_resolution(
-            &shadow_binding_name,
-        ) {
-            return false;
-        }
         self.resolve_runtime_shadow_object_binding(&owner_name)
             .and_then(|object_binding| {
                 object_binding_lookup_value(&object_binding, &materialized_property).cloned()
@@ -2171,7 +2368,10 @@ impl<'a> FunctionCompiler<'a> {
             .is_some_and(|value| self.infer_value_kind(&value) == Some(StaticValueKind::Number))
     }
 
-    fn expression_is_numeric_addition_operand(&self, expression: &Expression) -> bool {
+    pub(in crate::backend::direct_wasm) fn expression_is_numeric_addition_operand(
+        &self,
+        expression: &Expression,
+    ) -> bool {
         self.infer_value_kind(expression) == Some(StaticValueKind::Number)
             || self.expression_is_numeric_runtime_shadow_member(expression)
     }
@@ -3791,15 +3991,35 @@ impl<'a> FunctionCompiler<'a> {
         target_local: u32,
     ) -> DirectResult<()> {
         let invalidated_bindings = self.conditional_operand_effect_bindings(expression);
-        self.with_restored_static_binding_metadata(|compiler| {
-            compiler.emit_numeric_expression(expression)?;
-            compiler.push_local_set(target_local);
-            Ok(())
-        })?;
+        if Self::expression_emission_cannot_change_static_binding_metadata(expression) {
+            self.emit_numeric_expression(expression)?;
+            self.push_local_set(target_local);
+        } else {
+            self.with_restored_static_binding_metadata(|compiler| {
+                compiler.emit_numeric_expression(expression)?;
+                compiler.push_local_set(target_local);
+                Ok(())
+            })?;
+        }
         if !invalidated_bindings.is_empty() {
             self.invalidate_static_binding_metadata_for_names(&invalidated_bindings);
         }
         Ok(())
+    }
+
+    fn expression_emission_cannot_change_static_binding_metadata(expression: &Expression) -> bool {
+        matches!(
+            expression,
+            Expression::Number(_)
+                | Expression::BigInt(_)
+                | Expression::String(_)
+                | Expression::Bool(_)
+                | Expression::Null
+                | Expression::Undefined
+                | Expression::This
+                | Expression::NewTarget
+                | Expression::Sent
+        )
     }
 
     fn emit_static_addition_throw_after_operand_effects(
@@ -3973,6 +4193,16 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_numeric_expression(&Expression::Number(number));
         }
+        if let Some(value) = self.resolve_static_fresh_data_member_identity_boolean(op, left, right)
+        {
+            return self.emit_literal_expression(&Expression::Bool(value));
+        }
+        if matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+            && (self.expression_has_dynamic_member_property_access(left)
+                || self.expression_has_dynamic_member_property_access(right))
+        {
+            return self.emit_throw_aware_numeric_binary_op(op, left, right);
+        }
         let equality_depends_on_active_loop_assignment =
             !self.state.emission.control_flow.loop_stack.is_empty()
                 || self.expression_depends_on_active_loop_assignment(left)
@@ -4006,6 +4236,8 @@ impl<'a> FunctionCompiler<'a> {
             && !Self::expression_references_internal_assignment_temp(right)
             && !Self::expression_contains_assignment_or_update(left)
             && !Self::expression_contains_assignment_or_update(right)
+            && !Self::expression_contains_call_or_construct(left)
+            && !Self::expression_contains_call_or_construct(right)
             && !self.binary_expression_calls_user_function(left)
             && !self.binary_expression_calls_user_function(right)
             && matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
@@ -4089,6 +4321,19 @@ impl<'a> FunctionCompiler<'a> {
                 if self.emit_static_template_update_addition(expression)? {
                     return Ok(());
                 }
+                let addition_operands_are_definitely_numeric = self
+                    .expression_is_numeric_addition_operand(left)
+                    && self.expression_is_numeric_addition_operand(right);
+                if addition_operands_are_definitely_numeric
+                    && inline_summary_side_effect_free_expression(left)
+                    && inline_summary_side_effect_free_expression(right)
+                    && !Self::expression_contains_assignment_or_update(left)
+                    && !Self::expression_contains_assignment_or_update(right)
+                    && !self.binary_expression_calls_user_function(left)
+                    && !self.binary_expression_calls_user_function(right)
+                {
+                    return self.emit_throw_aware_numeric_binary_op(op, left, right);
+                }
                 let addition_depends_on_active_loop_assignment = self
                     .expression_depends_on_active_loop_assignment(left)
                     || self.expression_depends_on_active_loop_assignment(right);
@@ -4161,9 +4406,6 @@ impl<'a> FunctionCompiler<'a> {
                 if self.emit_active_loop_string_expression_from_sequence(expression)? {
                     return Ok(());
                 }
-                let addition_operands_are_definitely_numeric = self
-                    .expression_is_numeric_addition_operand(left)
-                    && self.expression_is_numeric_addition_operand(right);
                 if trace_addition {
                     eprintln!(
                         "addition:fallthrough definitely_numeric={addition_operands_are_definitely_numeric} left_kind={:?} right_kind={:?}",

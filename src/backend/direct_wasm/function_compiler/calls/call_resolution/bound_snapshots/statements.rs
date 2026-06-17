@@ -252,6 +252,16 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn bound_snapshot_break_targets_labeled_block(
+        labels: &[String],
+        label: Option<&String>,
+    ) -> bool {
+        match label {
+            None => false,
+            Some(label) => labels.iter().any(|candidate| candidate == label),
+        }
+    }
+
     fn execute_bound_snapshot_switch_body(
         &self,
         start_index: usize,
@@ -456,6 +466,22 @@ impl<'a> FunctionCompiler<'a> {
                     )?;
                     if !matches!(result, BoundSnapshotControlFlow::None) {
                         return Some(result);
+                    }
+                }
+                Statement::Labeled { labels, body } => {
+                    let result = self.execute_bound_snapshot_statements(
+                        body,
+                        bindings,
+                        current_function_name,
+                    )?;
+                    match result {
+                        BoundSnapshotControlFlow::None => {}
+                        BoundSnapshotControlFlow::Break(label)
+                            if Self::bound_snapshot_break_targets_labeled_block(
+                                labels,
+                                label.as_ref(),
+                            ) => {}
+                        other => return Some(other),
                     }
                 }
                 Statement::If {

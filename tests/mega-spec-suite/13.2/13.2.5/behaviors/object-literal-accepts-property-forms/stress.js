@@ -1,0 +1,2270 @@
+// behavior: object-literal-accepts-property-forms
+// expected: pass
+// goal: script
+// size: stress
+// variant: script.sloppy
+
+var score = 0;
+function check(condition, label) {
+if (!condition) {
+throw label;
+}
+score = score + 1;
+return true;
+}
+
+function makeSpread(seed) {
+return { spreadValue: seed + 6, shared: seed + 7 };
+}
+
+var shorthand0 = 1 + 1;
+var computedKey0 = "computed_0";
+var setterSink0 = 0;
+var syntaxObj0 = {
+shorthand0,
+plain0: 1,
+"string-0": 1 + 2,
+1000: 1 + 3,
+[computedKey0]: 1 + 4,
+...makeSpread(1),
+method0(delta) { return this.plain0 + delta; },
+get slot0() { return this.plain0 + 8; },
+set slot0(value) { setterSink0 = value; },
+};
+check(syntaxObj0.shorthand0 === 1 + 1, "shorthand syntax 0");
+check(syntaxObj0.plain0 === 1, "plain syntax 0");
+check(syntaxObj0["string-0"] === 1 + 2, "string key syntax 0");
+check(syntaxObj0[1000] === 1 + 3, "numeric key syntax 0");
+check(syntaxObj0[computedKey0] === 1 + 4, "computed key syntax 0");
+check(syntaxObj0.spreadValue === 1 + 6 && syntaxObj0.shared === 1 + 7, "spread syntax 0");
+check(syntaxObj0.method0(9) === 1 + 9, "method syntax 0");
+check(syntaxObj0.slot0 === 1 + 8, "getter syntax 0");
+syntaxObj0.slot0 = 1 + 10;
+check(setterSink0 === 1 + 10, "setter syntax 0");
+
+var shorthand1 = 21 + 1;
+var computedKey1 = "computed_1";
+var setterSink1 = 0;
+var syntaxObj1 = {
+shorthand1,
+plain1: 21,
+"string-1": 21 + 2,
+1001: 21 + 3,
+[computedKey1]: 21 + 4,
+...makeSpread(21),
+method1(delta) { return this.plain1 + delta; },
+get slot1() { return this.plain1 + 8; },
+set slot1(value) { setterSink1 = value; },
+};
+check(syntaxObj1.shorthand1 === 21 + 1, "shorthand syntax 1");
+check(syntaxObj1.plain1 === 21, "plain syntax 1");
+check(syntaxObj1["string-1"] === 21 + 2, "string key syntax 1");
+check(syntaxObj1[1001] === 21 + 3, "numeric key syntax 1");
+check(syntaxObj1[computedKey1] === 21 + 4, "computed key syntax 1");
+check(syntaxObj1.spreadValue === 21 + 6 && syntaxObj1.shared === 21 + 7, "spread syntax 1");
+check(syntaxObj1.method1(9) === 21 + 9, "method syntax 1");
+check(syntaxObj1.slot1 === 21 + 8, "getter syntax 1");
+syntaxObj1.slot1 = 21 + 10;
+check(setterSink1 === 21 + 10, "setter syntax 1");
+
+var shorthand2 = 41 + 1;
+var computedKey2 = "computed_2";
+var setterSink2 = 0;
+var syntaxObj2 = {
+shorthand2,
+plain2: 41,
+"string-2": 41 + 2,
+1002: 41 + 3,
+[computedKey2]: 41 + 4,
+...makeSpread(41),
+method2(delta) { return this.plain2 + delta; },
+get slot2() { return this.plain2 + 8; },
+set slot2(value) { setterSink2 = value; },
+};
+check(syntaxObj2.shorthand2 === 41 + 1, "shorthand syntax 2");
+check(syntaxObj2.plain2 === 41, "plain syntax 2");
+check(syntaxObj2["string-2"] === 41 + 2, "string key syntax 2");
+check(syntaxObj2[1002] === 41 + 3, "numeric key syntax 2");
+check(syntaxObj2[computedKey2] === 41 + 4, "computed key syntax 2");
+check(syntaxObj2.spreadValue === 41 + 6 && syntaxObj2.shared === 41 + 7, "spread syntax 2");
+check(syntaxObj2.method2(9) === 41 + 9, "method syntax 2");
+check(syntaxObj2.slot2 === 41 + 8, "getter syntax 2");
+syntaxObj2.slot2 = 41 + 10;
+check(setterSink2 === 41 + 10, "setter syntax 2");
+
+var shorthand3 = 61 + 1;
+var computedKey3 = "computed_3";
+var setterSink3 = 0;
+var syntaxObj3 = {
+shorthand3,
+plain3: 61,
+"string-3": 61 + 2,
+1003: 61 + 3,
+[computedKey3]: 61 + 4,
+...makeSpread(61),
+method3(delta) { return this.plain3 + delta; },
+get slot3() { return this.plain3 + 8; },
+set slot3(value) { setterSink3 = value; },
+};
+check(syntaxObj3.shorthand3 === 61 + 1, "shorthand syntax 3");
+check(syntaxObj3.plain3 === 61, "plain syntax 3");
+check(syntaxObj3["string-3"] === 61 + 2, "string key syntax 3");
+check(syntaxObj3[1003] === 61 + 3, "numeric key syntax 3");
+check(syntaxObj3[computedKey3] === 61 + 4, "computed key syntax 3");
+check(syntaxObj3.spreadValue === 61 + 6 && syntaxObj3.shared === 61 + 7, "spread syntax 3");
+check(syntaxObj3.method3(9) === 61 + 9, "method syntax 3");
+check(syntaxObj3.slot3 === 61 + 8, "getter syntax 3");
+syntaxObj3.slot3 = 61 + 10;
+check(setterSink3 === 61 + 10, "setter syntax 3");
+
+var shorthand4 = 81 + 1;
+var computedKey4 = "computed_4";
+var setterSink4 = 0;
+var syntaxObj4 = {
+shorthand4,
+plain4: 81,
+"string-4": 81 + 2,
+1004: 81 + 3,
+[computedKey4]: 81 + 4,
+...makeSpread(81),
+method4(delta) { return this.plain4 + delta; },
+get slot4() { return this.plain4 + 8; },
+set slot4(value) { setterSink4 = value; },
+};
+check(syntaxObj4.shorthand4 === 81 + 1, "shorthand syntax 4");
+check(syntaxObj4.plain4 === 81, "plain syntax 4");
+check(syntaxObj4["string-4"] === 81 + 2, "string key syntax 4");
+check(syntaxObj4[1004] === 81 + 3, "numeric key syntax 4");
+check(syntaxObj4[computedKey4] === 81 + 4, "computed key syntax 4");
+check(syntaxObj4.spreadValue === 81 + 6 && syntaxObj4.shared === 81 + 7, "spread syntax 4");
+check(syntaxObj4.method4(9) === 81 + 9, "method syntax 4");
+check(syntaxObj4.slot4 === 81 + 8, "getter syntax 4");
+syntaxObj4.slot4 = 81 + 10;
+check(setterSink4 === 81 + 10, "setter syntax 4");
+
+var shorthand5 = 101 + 1;
+var computedKey5 = "computed_5";
+var setterSink5 = 0;
+var syntaxObj5 = {
+shorthand5,
+plain5: 101,
+"string-5": 101 + 2,
+1005: 101 + 3,
+[computedKey5]: 101 + 4,
+...makeSpread(101),
+method5(delta) { return this.plain5 + delta; },
+get slot5() { return this.plain5 + 8; },
+set slot5(value) { setterSink5 = value; },
+};
+check(syntaxObj5.shorthand5 === 101 + 1, "shorthand syntax 5");
+check(syntaxObj5.plain5 === 101, "plain syntax 5");
+check(syntaxObj5["string-5"] === 101 + 2, "string key syntax 5");
+check(syntaxObj5[1005] === 101 + 3, "numeric key syntax 5");
+check(syntaxObj5[computedKey5] === 101 + 4, "computed key syntax 5");
+check(syntaxObj5.spreadValue === 101 + 6 && syntaxObj5.shared === 101 + 7, "spread syntax 5");
+check(syntaxObj5.method5(9) === 101 + 9, "method syntax 5");
+check(syntaxObj5.slot5 === 101 + 8, "getter syntax 5");
+syntaxObj5.slot5 = 101 + 10;
+check(setterSink5 === 101 + 10, "setter syntax 5");
+
+var shorthand6 = 121 + 1;
+var computedKey6 = "computed_6";
+var setterSink6 = 0;
+var syntaxObj6 = {
+shorthand6,
+plain6: 121,
+"string-6": 121 + 2,
+1006: 121 + 3,
+[computedKey6]: 121 + 4,
+...makeSpread(121),
+method6(delta) { return this.plain6 + delta; },
+get slot6() { return this.plain6 + 8; },
+set slot6(value) { setterSink6 = value; },
+};
+check(syntaxObj6.shorthand6 === 121 + 1, "shorthand syntax 6");
+check(syntaxObj6.plain6 === 121, "plain syntax 6");
+check(syntaxObj6["string-6"] === 121 + 2, "string key syntax 6");
+check(syntaxObj6[1006] === 121 + 3, "numeric key syntax 6");
+check(syntaxObj6[computedKey6] === 121 + 4, "computed key syntax 6");
+check(syntaxObj6.spreadValue === 121 + 6 && syntaxObj6.shared === 121 + 7, "spread syntax 6");
+check(syntaxObj6.method6(9) === 121 + 9, "method syntax 6");
+check(syntaxObj6.slot6 === 121 + 8, "getter syntax 6");
+syntaxObj6.slot6 = 121 + 10;
+check(setterSink6 === 121 + 10, "setter syntax 6");
+
+var shorthand7 = 141 + 1;
+var computedKey7 = "computed_7";
+var setterSink7 = 0;
+var syntaxObj7 = {
+shorthand7,
+plain7: 141,
+"string-7": 141 + 2,
+1007: 141 + 3,
+[computedKey7]: 141 + 4,
+...makeSpread(141),
+method7(delta) { return this.plain7 + delta; },
+get slot7() { return this.plain7 + 8; },
+set slot7(value) { setterSink7 = value; },
+};
+check(syntaxObj7.shorthand7 === 141 + 1, "shorthand syntax 7");
+check(syntaxObj7.plain7 === 141, "plain syntax 7");
+check(syntaxObj7["string-7"] === 141 + 2, "string key syntax 7");
+check(syntaxObj7[1007] === 141 + 3, "numeric key syntax 7");
+check(syntaxObj7[computedKey7] === 141 + 4, "computed key syntax 7");
+check(syntaxObj7.spreadValue === 141 + 6 && syntaxObj7.shared === 141 + 7, "spread syntax 7");
+check(syntaxObj7.method7(9) === 141 + 9, "method syntax 7");
+check(syntaxObj7.slot7 === 141 + 8, "getter syntax 7");
+syntaxObj7.slot7 = 141 + 10;
+check(setterSink7 === 141 + 10, "setter syntax 7");
+
+var shorthand8 = 161 + 1;
+var computedKey8 = "computed_8";
+var setterSink8 = 0;
+var syntaxObj8 = {
+shorthand8,
+plain8: 161,
+"string-8": 161 + 2,
+1008: 161 + 3,
+[computedKey8]: 161 + 4,
+...makeSpread(161),
+method8(delta) { return this.plain8 + delta; },
+get slot8() { return this.plain8 + 8; },
+set slot8(value) { setterSink8 = value; },
+};
+check(syntaxObj8.shorthand8 === 161 + 1, "shorthand syntax 8");
+check(syntaxObj8.plain8 === 161, "plain syntax 8");
+check(syntaxObj8["string-8"] === 161 + 2, "string key syntax 8");
+check(syntaxObj8[1008] === 161 + 3, "numeric key syntax 8");
+check(syntaxObj8[computedKey8] === 161 + 4, "computed key syntax 8");
+check(syntaxObj8.spreadValue === 161 + 6 && syntaxObj8.shared === 161 + 7, "spread syntax 8");
+check(syntaxObj8.method8(9) === 161 + 9, "method syntax 8");
+check(syntaxObj8.slot8 === 161 + 8, "getter syntax 8");
+syntaxObj8.slot8 = 161 + 10;
+check(setterSink8 === 161 + 10, "setter syntax 8");
+
+var shorthand9 = 181 + 1;
+var computedKey9 = "computed_9";
+var setterSink9 = 0;
+var syntaxObj9 = {
+shorthand9,
+plain9: 181,
+"string-9": 181 + 2,
+1009: 181 + 3,
+[computedKey9]: 181 + 4,
+...makeSpread(181),
+method9(delta) { return this.plain9 + delta; },
+get slot9() { return this.plain9 + 8; },
+set slot9(value) { setterSink9 = value; },
+};
+check(syntaxObj9.shorthand9 === 181 + 1, "shorthand syntax 9");
+check(syntaxObj9.plain9 === 181, "plain syntax 9");
+check(syntaxObj9["string-9"] === 181 + 2, "string key syntax 9");
+check(syntaxObj9[1009] === 181 + 3, "numeric key syntax 9");
+check(syntaxObj9[computedKey9] === 181 + 4, "computed key syntax 9");
+check(syntaxObj9.spreadValue === 181 + 6 && syntaxObj9.shared === 181 + 7, "spread syntax 9");
+check(syntaxObj9.method9(9) === 181 + 9, "method syntax 9");
+check(syntaxObj9.slot9 === 181 + 8, "getter syntax 9");
+syntaxObj9.slot9 = 181 + 10;
+check(setterSink9 === 181 + 10, "setter syntax 9");
+
+var shorthand10 = 201 + 1;
+var computedKey10 = "computed_10";
+var setterSink10 = 0;
+var syntaxObj10 = {
+shorthand10,
+plain10: 201,
+"string-10": 201 + 2,
+1010: 201 + 3,
+[computedKey10]: 201 + 4,
+...makeSpread(201),
+method10(delta) { return this.plain10 + delta; },
+get slot10() { return this.plain10 + 8; },
+set slot10(value) { setterSink10 = value; },
+};
+check(syntaxObj10.shorthand10 === 201 + 1, "shorthand syntax 10");
+check(syntaxObj10.plain10 === 201, "plain syntax 10");
+check(syntaxObj10["string-10"] === 201 + 2, "string key syntax 10");
+check(syntaxObj10[1010] === 201 + 3, "numeric key syntax 10");
+check(syntaxObj10[computedKey10] === 201 + 4, "computed key syntax 10");
+check(syntaxObj10.spreadValue === 201 + 6 && syntaxObj10.shared === 201 + 7, "spread syntax 10");
+check(syntaxObj10.method10(9) === 201 + 9, "method syntax 10");
+check(syntaxObj10.slot10 === 201 + 8, "getter syntax 10");
+syntaxObj10.slot10 = 201 + 10;
+check(setterSink10 === 201 + 10, "setter syntax 10");
+
+var shorthand11 = 221 + 1;
+var computedKey11 = "computed_11";
+var setterSink11 = 0;
+var syntaxObj11 = {
+shorthand11,
+plain11: 221,
+"string-11": 221 + 2,
+1011: 221 + 3,
+[computedKey11]: 221 + 4,
+...makeSpread(221),
+method11(delta) { return this.plain11 + delta; },
+get slot11() { return this.plain11 + 8; },
+set slot11(value) { setterSink11 = value; },
+};
+check(syntaxObj11.shorthand11 === 221 + 1, "shorthand syntax 11");
+check(syntaxObj11.plain11 === 221, "plain syntax 11");
+check(syntaxObj11["string-11"] === 221 + 2, "string key syntax 11");
+check(syntaxObj11[1011] === 221 + 3, "numeric key syntax 11");
+check(syntaxObj11[computedKey11] === 221 + 4, "computed key syntax 11");
+check(syntaxObj11.spreadValue === 221 + 6 && syntaxObj11.shared === 221 + 7, "spread syntax 11");
+check(syntaxObj11.method11(9) === 221 + 9, "method syntax 11");
+check(syntaxObj11.slot11 === 221 + 8, "getter syntax 11");
+syntaxObj11.slot11 = 221 + 10;
+check(setterSink11 === 221 + 10, "setter syntax 11");
+
+var shorthand12 = 241 + 1;
+var computedKey12 = "computed_12";
+var setterSink12 = 0;
+var syntaxObj12 = {
+shorthand12,
+plain12: 241,
+"string-12": 241 + 2,
+1012: 241 + 3,
+[computedKey12]: 241 + 4,
+...makeSpread(241),
+method12(delta) { return this.plain12 + delta; },
+get slot12() { return this.plain12 + 8; },
+set slot12(value) { setterSink12 = value; },
+};
+check(syntaxObj12.shorthand12 === 241 + 1, "shorthand syntax 12");
+check(syntaxObj12.plain12 === 241, "plain syntax 12");
+check(syntaxObj12["string-12"] === 241 + 2, "string key syntax 12");
+check(syntaxObj12[1012] === 241 + 3, "numeric key syntax 12");
+check(syntaxObj12[computedKey12] === 241 + 4, "computed key syntax 12");
+check(syntaxObj12.spreadValue === 241 + 6 && syntaxObj12.shared === 241 + 7, "spread syntax 12");
+check(syntaxObj12.method12(9) === 241 + 9, "method syntax 12");
+check(syntaxObj12.slot12 === 241 + 8, "getter syntax 12");
+syntaxObj12.slot12 = 241 + 10;
+check(setterSink12 === 241 + 10, "setter syntax 12");
+
+var shorthand13 = 261 + 1;
+var computedKey13 = "computed_13";
+var setterSink13 = 0;
+var syntaxObj13 = {
+shorthand13,
+plain13: 261,
+"string-13": 261 + 2,
+1013: 261 + 3,
+[computedKey13]: 261 + 4,
+...makeSpread(261),
+method13(delta) { return this.plain13 + delta; },
+get slot13() { return this.plain13 + 8; },
+set slot13(value) { setterSink13 = value; },
+};
+check(syntaxObj13.shorthand13 === 261 + 1, "shorthand syntax 13");
+check(syntaxObj13.plain13 === 261, "plain syntax 13");
+check(syntaxObj13["string-13"] === 261 + 2, "string key syntax 13");
+check(syntaxObj13[1013] === 261 + 3, "numeric key syntax 13");
+check(syntaxObj13[computedKey13] === 261 + 4, "computed key syntax 13");
+check(syntaxObj13.spreadValue === 261 + 6 && syntaxObj13.shared === 261 + 7, "spread syntax 13");
+check(syntaxObj13.method13(9) === 261 + 9, "method syntax 13");
+check(syntaxObj13.slot13 === 261 + 8, "getter syntax 13");
+syntaxObj13.slot13 = 261 + 10;
+check(setterSink13 === 261 + 10, "setter syntax 13");
+
+var shorthand14 = 281 + 1;
+var computedKey14 = "computed_14";
+var setterSink14 = 0;
+var syntaxObj14 = {
+shorthand14,
+plain14: 281,
+"string-14": 281 + 2,
+1014: 281 + 3,
+[computedKey14]: 281 + 4,
+...makeSpread(281),
+method14(delta) { return this.plain14 + delta; },
+get slot14() { return this.plain14 + 8; },
+set slot14(value) { setterSink14 = value; },
+};
+check(syntaxObj14.shorthand14 === 281 + 1, "shorthand syntax 14");
+check(syntaxObj14.plain14 === 281, "plain syntax 14");
+check(syntaxObj14["string-14"] === 281 + 2, "string key syntax 14");
+check(syntaxObj14[1014] === 281 + 3, "numeric key syntax 14");
+check(syntaxObj14[computedKey14] === 281 + 4, "computed key syntax 14");
+check(syntaxObj14.spreadValue === 281 + 6 && syntaxObj14.shared === 281 + 7, "spread syntax 14");
+check(syntaxObj14.method14(9) === 281 + 9, "method syntax 14");
+check(syntaxObj14.slot14 === 281 + 8, "getter syntax 14");
+syntaxObj14.slot14 = 281 + 10;
+check(setterSink14 === 281 + 10, "setter syntax 14");
+
+var shorthand15 = 301 + 1;
+var computedKey15 = "computed_15";
+var setterSink15 = 0;
+var syntaxObj15 = {
+shorthand15,
+plain15: 301,
+"string-15": 301 + 2,
+1015: 301 + 3,
+[computedKey15]: 301 + 4,
+...makeSpread(301),
+method15(delta) { return this.plain15 + delta; },
+get slot15() { return this.plain15 + 8; },
+set slot15(value) { setterSink15 = value; },
+};
+check(syntaxObj15.shorthand15 === 301 + 1, "shorthand syntax 15");
+check(syntaxObj15.plain15 === 301, "plain syntax 15");
+check(syntaxObj15["string-15"] === 301 + 2, "string key syntax 15");
+check(syntaxObj15[1015] === 301 + 3, "numeric key syntax 15");
+check(syntaxObj15[computedKey15] === 301 + 4, "computed key syntax 15");
+check(syntaxObj15.spreadValue === 301 + 6 && syntaxObj15.shared === 301 + 7, "spread syntax 15");
+check(syntaxObj15.method15(9) === 301 + 9, "method syntax 15");
+check(syntaxObj15.slot15 === 301 + 8, "getter syntax 15");
+syntaxObj15.slot15 = 301 + 10;
+check(setterSink15 === 301 + 10, "setter syntax 15");
+
+var shorthand16 = 321 + 1;
+var computedKey16 = "computed_16";
+var setterSink16 = 0;
+var syntaxObj16 = {
+shorthand16,
+plain16: 321,
+"string-16": 321 + 2,
+1016: 321 + 3,
+[computedKey16]: 321 + 4,
+...makeSpread(321),
+method16(delta) { return this.plain16 + delta; },
+get slot16() { return this.plain16 + 8; },
+set slot16(value) { setterSink16 = value; },
+};
+check(syntaxObj16.shorthand16 === 321 + 1, "shorthand syntax 16");
+check(syntaxObj16.plain16 === 321, "plain syntax 16");
+check(syntaxObj16["string-16"] === 321 + 2, "string key syntax 16");
+check(syntaxObj16[1016] === 321 + 3, "numeric key syntax 16");
+check(syntaxObj16[computedKey16] === 321 + 4, "computed key syntax 16");
+check(syntaxObj16.spreadValue === 321 + 6 && syntaxObj16.shared === 321 + 7, "spread syntax 16");
+check(syntaxObj16.method16(9) === 321 + 9, "method syntax 16");
+check(syntaxObj16.slot16 === 321 + 8, "getter syntax 16");
+syntaxObj16.slot16 = 321 + 10;
+check(setterSink16 === 321 + 10, "setter syntax 16");
+
+var shorthand17 = 341 + 1;
+var computedKey17 = "computed_17";
+var setterSink17 = 0;
+var syntaxObj17 = {
+shorthand17,
+plain17: 341,
+"string-17": 341 + 2,
+1017: 341 + 3,
+[computedKey17]: 341 + 4,
+...makeSpread(341),
+method17(delta) { return this.plain17 + delta; },
+get slot17() { return this.plain17 + 8; },
+set slot17(value) { setterSink17 = value; },
+};
+check(syntaxObj17.shorthand17 === 341 + 1, "shorthand syntax 17");
+check(syntaxObj17.plain17 === 341, "plain syntax 17");
+check(syntaxObj17["string-17"] === 341 + 2, "string key syntax 17");
+check(syntaxObj17[1017] === 341 + 3, "numeric key syntax 17");
+check(syntaxObj17[computedKey17] === 341 + 4, "computed key syntax 17");
+check(syntaxObj17.spreadValue === 341 + 6 && syntaxObj17.shared === 341 + 7, "spread syntax 17");
+check(syntaxObj17.method17(9) === 341 + 9, "method syntax 17");
+check(syntaxObj17.slot17 === 341 + 8, "getter syntax 17");
+syntaxObj17.slot17 = 341 + 10;
+check(setterSink17 === 341 + 10, "setter syntax 17");
+
+var shorthand18 = 361 + 1;
+var computedKey18 = "computed_18";
+var setterSink18 = 0;
+var syntaxObj18 = {
+shorthand18,
+plain18: 361,
+"string-18": 361 + 2,
+1018: 361 + 3,
+[computedKey18]: 361 + 4,
+...makeSpread(361),
+method18(delta) { return this.plain18 + delta; },
+get slot18() { return this.plain18 + 8; },
+set slot18(value) { setterSink18 = value; },
+};
+check(syntaxObj18.shorthand18 === 361 + 1, "shorthand syntax 18");
+check(syntaxObj18.plain18 === 361, "plain syntax 18");
+check(syntaxObj18["string-18"] === 361 + 2, "string key syntax 18");
+check(syntaxObj18[1018] === 361 + 3, "numeric key syntax 18");
+check(syntaxObj18[computedKey18] === 361 + 4, "computed key syntax 18");
+check(syntaxObj18.spreadValue === 361 + 6 && syntaxObj18.shared === 361 + 7, "spread syntax 18");
+check(syntaxObj18.method18(9) === 361 + 9, "method syntax 18");
+check(syntaxObj18.slot18 === 361 + 8, "getter syntax 18");
+syntaxObj18.slot18 = 361 + 10;
+check(setterSink18 === 361 + 10, "setter syntax 18");
+
+var shorthand19 = 381 + 1;
+var computedKey19 = "computed_19";
+var setterSink19 = 0;
+var syntaxObj19 = {
+shorthand19,
+plain19: 381,
+"string-19": 381 + 2,
+1019: 381 + 3,
+[computedKey19]: 381 + 4,
+...makeSpread(381),
+method19(delta) { return this.plain19 + delta; },
+get slot19() { return this.plain19 + 8; },
+set slot19(value) { setterSink19 = value; },
+};
+check(syntaxObj19.shorthand19 === 381 + 1, "shorthand syntax 19");
+check(syntaxObj19.plain19 === 381, "plain syntax 19");
+check(syntaxObj19["string-19"] === 381 + 2, "string key syntax 19");
+check(syntaxObj19[1019] === 381 + 3, "numeric key syntax 19");
+check(syntaxObj19[computedKey19] === 381 + 4, "computed key syntax 19");
+check(syntaxObj19.spreadValue === 381 + 6 && syntaxObj19.shared === 381 + 7, "spread syntax 19");
+check(syntaxObj19.method19(9) === 381 + 9, "method syntax 19");
+check(syntaxObj19.slot19 === 381 + 8, "getter syntax 19");
+syntaxObj19.slot19 = 381 + 10;
+check(setterSink19 === 381 + 10, "setter syntax 19");
+
+var shorthand20 = 401 + 1;
+var computedKey20 = "computed_20";
+var setterSink20 = 0;
+var syntaxObj20 = {
+shorthand20,
+plain20: 401,
+"string-20": 401 + 2,
+1020: 401 + 3,
+[computedKey20]: 401 + 4,
+...makeSpread(401),
+method20(delta) { return this.plain20 + delta; },
+get slot20() { return this.plain20 + 8; },
+set slot20(value) { setterSink20 = value; },
+};
+check(syntaxObj20.shorthand20 === 401 + 1, "shorthand syntax 20");
+check(syntaxObj20.plain20 === 401, "plain syntax 20");
+check(syntaxObj20["string-20"] === 401 + 2, "string key syntax 20");
+check(syntaxObj20[1020] === 401 + 3, "numeric key syntax 20");
+check(syntaxObj20[computedKey20] === 401 + 4, "computed key syntax 20");
+check(syntaxObj20.spreadValue === 401 + 6 && syntaxObj20.shared === 401 + 7, "spread syntax 20");
+check(syntaxObj20.method20(9) === 401 + 9, "method syntax 20");
+check(syntaxObj20.slot20 === 401 + 8, "getter syntax 20");
+syntaxObj20.slot20 = 401 + 10;
+check(setterSink20 === 401 + 10, "setter syntax 20");
+
+var shorthand21 = 421 + 1;
+var computedKey21 = "computed_21";
+var setterSink21 = 0;
+var syntaxObj21 = {
+shorthand21,
+plain21: 421,
+"string-21": 421 + 2,
+1021: 421 + 3,
+[computedKey21]: 421 + 4,
+...makeSpread(421),
+method21(delta) { return this.plain21 + delta; },
+get slot21() { return this.plain21 + 8; },
+set slot21(value) { setterSink21 = value; },
+};
+check(syntaxObj21.shorthand21 === 421 + 1, "shorthand syntax 21");
+check(syntaxObj21.plain21 === 421, "plain syntax 21");
+check(syntaxObj21["string-21"] === 421 + 2, "string key syntax 21");
+check(syntaxObj21[1021] === 421 + 3, "numeric key syntax 21");
+check(syntaxObj21[computedKey21] === 421 + 4, "computed key syntax 21");
+check(syntaxObj21.spreadValue === 421 + 6 && syntaxObj21.shared === 421 + 7, "spread syntax 21");
+check(syntaxObj21.method21(9) === 421 + 9, "method syntax 21");
+check(syntaxObj21.slot21 === 421 + 8, "getter syntax 21");
+syntaxObj21.slot21 = 421 + 10;
+check(setterSink21 === 421 + 10, "setter syntax 21");
+
+var shorthand22 = 441 + 1;
+var computedKey22 = "computed_22";
+var setterSink22 = 0;
+var syntaxObj22 = {
+shorthand22,
+plain22: 441,
+"string-22": 441 + 2,
+1022: 441 + 3,
+[computedKey22]: 441 + 4,
+...makeSpread(441),
+method22(delta) { return this.plain22 + delta; },
+get slot22() { return this.plain22 + 8; },
+set slot22(value) { setterSink22 = value; },
+};
+check(syntaxObj22.shorthand22 === 441 + 1, "shorthand syntax 22");
+check(syntaxObj22.plain22 === 441, "plain syntax 22");
+check(syntaxObj22["string-22"] === 441 + 2, "string key syntax 22");
+check(syntaxObj22[1022] === 441 + 3, "numeric key syntax 22");
+check(syntaxObj22[computedKey22] === 441 + 4, "computed key syntax 22");
+check(syntaxObj22.spreadValue === 441 + 6 && syntaxObj22.shared === 441 + 7, "spread syntax 22");
+check(syntaxObj22.method22(9) === 441 + 9, "method syntax 22");
+check(syntaxObj22.slot22 === 441 + 8, "getter syntax 22");
+syntaxObj22.slot22 = 441 + 10;
+check(setterSink22 === 441 + 10, "setter syntax 22");
+
+var shorthand23 = 461 + 1;
+var computedKey23 = "computed_23";
+var setterSink23 = 0;
+var syntaxObj23 = {
+shorthand23,
+plain23: 461,
+"string-23": 461 + 2,
+1023: 461 + 3,
+[computedKey23]: 461 + 4,
+...makeSpread(461),
+method23(delta) { return this.plain23 + delta; },
+get slot23() { return this.plain23 + 8; },
+set slot23(value) { setterSink23 = value; },
+};
+check(syntaxObj23.shorthand23 === 461 + 1, "shorthand syntax 23");
+check(syntaxObj23.plain23 === 461, "plain syntax 23");
+check(syntaxObj23["string-23"] === 461 + 2, "string key syntax 23");
+check(syntaxObj23[1023] === 461 + 3, "numeric key syntax 23");
+check(syntaxObj23[computedKey23] === 461 + 4, "computed key syntax 23");
+check(syntaxObj23.spreadValue === 461 + 6 && syntaxObj23.shared === 461 + 7, "spread syntax 23");
+check(syntaxObj23.method23(9) === 461 + 9, "method syntax 23");
+check(syntaxObj23.slot23 === 461 + 8, "getter syntax 23");
+syntaxObj23.slot23 = 461 + 10;
+check(setterSink23 === 461 + 10, "setter syntax 23");
+
+var shorthand24 = 481 + 1;
+var computedKey24 = "computed_24";
+var setterSink24 = 0;
+var syntaxObj24 = {
+shorthand24,
+plain24: 481,
+"string-24": 481 + 2,
+1024: 481 + 3,
+[computedKey24]: 481 + 4,
+...makeSpread(481),
+method24(delta) { return this.plain24 + delta; },
+get slot24() { return this.plain24 + 8; },
+set slot24(value) { setterSink24 = value; },
+};
+check(syntaxObj24.shorthand24 === 481 + 1, "shorthand syntax 24");
+check(syntaxObj24.plain24 === 481, "plain syntax 24");
+check(syntaxObj24["string-24"] === 481 + 2, "string key syntax 24");
+check(syntaxObj24[1024] === 481 + 3, "numeric key syntax 24");
+check(syntaxObj24[computedKey24] === 481 + 4, "computed key syntax 24");
+check(syntaxObj24.spreadValue === 481 + 6 && syntaxObj24.shared === 481 + 7, "spread syntax 24");
+check(syntaxObj24.method24(9) === 481 + 9, "method syntax 24");
+check(syntaxObj24.slot24 === 481 + 8, "getter syntax 24");
+syntaxObj24.slot24 = 481 + 10;
+check(setterSink24 === 481 + 10, "setter syntax 24");
+
+var shorthand25 = 501 + 1;
+var computedKey25 = "computed_25";
+var setterSink25 = 0;
+var syntaxObj25 = {
+shorthand25,
+plain25: 501,
+"string-25": 501 + 2,
+1025: 501 + 3,
+[computedKey25]: 501 + 4,
+...makeSpread(501),
+method25(delta) { return this.plain25 + delta; },
+get slot25() { return this.plain25 + 8; },
+set slot25(value) { setterSink25 = value; },
+};
+check(syntaxObj25.shorthand25 === 501 + 1, "shorthand syntax 25");
+check(syntaxObj25.plain25 === 501, "plain syntax 25");
+check(syntaxObj25["string-25"] === 501 + 2, "string key syntax 25");
+check(syntaxObj25[1025] === 501 + 3, "numeric key syntax 25");
+check(syntaxObj25[computedKey25] === 501 + 4, "computed key syntax 25");
+check(syntaxObj25.spreadValue === 501 + 6 && syntaxObj25.shared === 501 + 7, "spread syntax 25");
+check(syntaxObj25.method25(9) === 501 + 9, "method syntax 25");
+check(syntaxObj25.slot25 === 501 + 8, "getter syntax 25");
+syntaxObj25.slot25 = 501 + 10;
+check(setterSink25 === 501 + 10, "setter syntax 25");
+
+var shorthand26 = 521 + 1;
+var computedKey26 = "computed_26";
+var setterSink26 = 0;
+var syntaxObj26 = {
+shorthand26,
+plain26: 521,
+"string-26": 521 + 2,
+1026: 521 + 3,
+[computedKey26]: 521 + 4,
+...makeSpread(521),
+method26(delta) { return this.plain26 + delta; },
+get slot26() { return this.plain26 + 8; },
+set slot26(value) { setterSink26 = value; },
+};
+check(syntaxObj26.shorthand26 === 521 + 1, "shorthand syntax 26");
+check(syntaxObj26.plain26 === 521, "plain syntax 26");
+check(syntaxObj26["string-26"] === 521 + 2, "string key syntax 26");
+check(syntaxObj26[1026] === 521 + 3, "numeric key syntax 26");
+check(syntaxObj26[computedKey26] === 521 + 4, "computed key syntax 26");
+check(syntaxObj26.spreadValue === 521 + 6 && syntaxObj26.shared === 521 + 7, "spread syntax 26");
+check(syntaxObj26.method26(9) === 521 + 9, "method syntax 26");
+check(syntaxObj26.slot26 === 521 + 8, "getter syntax 26");
+syntaxObj26.slot26 = 521 + 10;
+check(setterSink26 === 521 + 10, "setter syntax 26");
+
+var shorthand27 = 541 + 1;
+var computedKey27 = "computed_27";
+var setterSink27 = 0;
+var syntaxObj27 = {
+shorthand27,
+plain27: 541,
+"string-27": 541 + 2,
+1027: 541 + 3,
+[computedKey27]: 541 + 4,
+...makeSpread(541),
+method27(delta) { return this.plain27 + delta; },
+get slot27() { return this.plain27 + 8; },
+set slot27(value) { setterSink27 = value; },
+};
+check(syntaxObj27.shorthand27 === 541 + 1, "shorthand syntax 27");
+check(syntaxObj27.plain27 === 541, "plain syntax 27");
+check(syntaxObj27["string-27"] === 541 + 2, "string key syntax 27");
+check(syntaxObj27[1027] === 541 + 3, "numeric key syntax 27");
+check(syntaxObj27[computedKey27] === 541 + 4, "computed key syntax 27");
+check(syntaxObj27.spreadValue === 541 + 6 && syntaxObj27.shared === 541 + 7, "spread syntax 27");
+check(syntaxObj27.method27(9) === 541 + 9, "method syntax 27");
+check(syntaxObj27.slot27 === 541 + 8, "getter syntax 27");
+syntaxObj27.slot27 = 541 + 10;
+check(setterSink27 === 541 + 10, "setter syntax 27");
+
+var shorthand28 = 561 + 1;
+var computedKey28 = "computed_28";
+var setterSink28 = 0;
+var syntaxObj28 = {
+shorthand28,
+plain28: 561,
+"string-28": 561 + 2,
+1028: 561 + 3,
+[computedKey28]: 561 + 4,
+...makeSpread(561),
+method28(delta) { return this.plain28 + delta; },
+get slot28() { return this.plain28 + 8; },
+set slot28(value) { setterSink28 = value; },
+};
+check(syntaxObj28.shorthand28 === 561 + 1, "shorthand syntax 28");
+check(syntaxObj28.plain28 === 561, "plain syntax 28");
+check(syntaxObj28["string-28"] === 561 + 2, "string key syntax 28");
+check(syntaxObj28[1028] === 561 + 3, "numeric key syntax 28");
+check(syntaxObj28[computedKey28] === 561 + 4, "computed key syntax 28");
+check(syntaxObj28.spreadValue === 561 + 6 && syntaxObj28.shared === 561 + 7, "spread syntax 28");
+check(syntaxObj28.method28(9) === 561 + 9, "method syntax 28");
+check(syntaxObj28.slot28 === 561 + 8, "getter syntax 28");
+syntaxObj28.slot28 = 561 + 10;
+check(setterSink28 === 561 + 10, "setter syntax 28");
+
+var shorthand29 = 581 + 1;
+var computedKey29 = "computed_29";
+var setterSink29 = 0;
+var syntaxObj29 = {
+shorthand29,
+plain29: 581,
+"string-29": 581 + 2,
+1029: 581 + 3,
+[computedKey29]: 581 + 4,
+...makeSpread(581),
+method29(delta) { return this.plain29 + delta; },
+get slot29() { return this.plain29 + 8; },
+set slot29(value) { setterSink29 = value; },
+};
+check(syntaxObj29.shorthand29 === 581 + 1, "shorthand syntax 29");
+check(syntaxObj29.plain29 === 581, "plain syntax 29");
+check(syntaxObj29["string-29"] === 581 + 2, "string key syntax 29");
+check(syntaxObj29[1029] === 581 + 3, "numeric key syntax 29");
+check(syntaxObj29[computedKey29] === 581 + 4, "computed key syntax 29");
+check(syntaxObj29.spreadValue === 581 + 6 && syntaxObj29.shared === 581 + 7, "spread syntax 29");
+check(syntaxObj29.method29(9) === 581 + 9, "method syntax 29");
+check(syntaxObj29.slot29 === 581 + 8, "getter syntax 29");
+syntaxObj29.slot29 = 581 + 10;
+check(setterSink29 === 581 + 10, "setter syntax 29");
+
+var shorthand30 = 601 + 1;
+var computedKey30 = "computed_30";
+var setterSink30 = 0;
+var syntaxObj30 = {
+shorthand30,
+plain30: 601,
+"string-30": 601 + 2,
+1030: 601 + 3,
+[computedKey30]: 601 + 4,
+...makeSpread(601),
+method30(delta) { return this.plain30 + delta; },
+get slot30() { return this.plain30 + 8; },
+set slot30(value) { setterSink30 = value; },
+};
+check(syntaxObj30.shorthand30 === 601 + 1, "shorthand syntax 30");
+check(syntaxObj30.plain30 === 601, "plain syntax 30");
+check(syntaxObj30["string-30"] === 601 + 2, "string key syntax 30");
+check(syntaxObj30[1030] === 601 + 3, "numeric key syntax 30");
+check(syntaxObj30[computedKey30] === 601 + 4, "computed key syntax 30");
+check(syntaxObj30.spreadValue === 601 + 6 && syntaxObj30.shared === 601 + 7, "spread syntax 30");
+check(syntaxObj30.method30(9) === 601 + 9, "method syntax 30");
+check(syntaxObj30.slot30 === 601 + 8, "getter syntax 30");
+syntaxObj30.slot30 = 601 + 10;
+check(setterSink30 === 601 + 10, "setter syntax 30");
+
+var shorthand31 = 621 + 1;
+var computedKey31 = "computed_31";
+var setterSink31 = 0;
+var syntaxObj31 = {
+shorthand31,
+plain31: 621,
+"string-31": 621 + 2,
+1031: 621 + 3,
+[computedKey31]: 621 + 4,
+...makeSpread(621),
+method31(delta) { return this.plain31 + delta; },
+get slot31() { return this.plain31 + 8; },
+set slot31(value) { setterSink31 = value; },
+};
+check(syntaxObj31.shorthand31 === 621 + 1, "shorthand syntax 31");
+check(syntaxObj31.plain31 === 621, "plain syntax 31");
+check(syntaxObj31["string-31"] === 621 + 2, "string key syntax 31");
+check(syntaxObj31[1031] === 621 + 3, "numeric key syntax 31");
+check(syntaxObj31[computedKey31] === 621 + 4, "computed key syntax 31");
+check(syntaxObj31.spreadValue === 621 + 6 && syntaxObj31.shared === 621 + 7, "spread syntax 31");
+check(syntaxObj31.method31(9) === 621 + 9, "method syntax 31");
+check(syntaxObj31.slot31 === 621 + 8, "getter syntax 31");
+syntaxObj31.slot31 = 621 + 10;
+check(setterSink31 === 621 + 10, "setter syntax 31");
+
+var shorthand32 = 641 + 1;
+var computedKey32 = "computed_32";
+var setterSink32 = 0;
+var syntaxObj32 = {
+shorthand32,
+plain32: 641,
+"string-32": 641 + 2,
+1032: 641 + 3,
+[computedKey32]: 641 + 4,
+...makeSpread(641),
+method32(delta) { return this.plain32 + delta; },
+get slot32() { return this.plain32 + 8; },
+set slot32(value) { setterSink32 = value; },
+};
+check(syntaxObj32.shorthand32 === 641 + 1, "shorthand syntax 32");
+check(syntaxObj32.plain32 === 641, "plain syntax 32");
+check(syntaxObj32["string-32"] === 641 + 2, "string key syntax 32");
+check(syntaxObj32[1032] === 641 + 3, "numeric key syntax 32");
+check(syntaxObj32[computedKey32] === 641 + 4, "computed key syntax 32");
+check(syntaxObj32.spreadValue === 641 + 6 && syntaxObj32.shared === 641 + 7, "spread syntax 32");
+check(syntaxObj32.method32(9) === 641 + 9, "method syntax 32");
+check(syntaxObj32.slot32 === 641 + 8, "getter syntax 32");
+syntaxObj32.slot32 = 641 + 10;
+check(setterSink32 === 641 + 10, "setter syntax 32");
+
+var shorthand33 = 661 + 1;
+var computedKey33 = "computed_33";
+var setterSink33 = 0;
+var syntaxObj33 = {
+shorthand33,
+plain33: 661,
+"string-33": 661 + 2,
+1033: 661 + 3,
+[computedKey33]: 661 + 4,
+...makeSpread(661),
+method33(delta) { return this.plain33 + delta; },
+get slot33() { return this.plain33 + 8; },
+set slot33(value) { setterSink33 = value; },
+};
+check(syntaxObj33.shorthand33 === 661 + 1, "shorthand syntax 33");
+check(syntaxObj33.plain33 === 661, "plain syntax 33");
+check(syntaxObj33["string-33"] === 661 + 2, "string key syntax 33");
+check(syntaxObj33[1033] === 661 + 3, "numeric key syntax 33");
+check(syntaxObj33[computedKey33] === 661 + 4, "computed key syntax 33");
+check(syntaxObj33.spreadValue === 661 + 6 && syntaxObj33.shared === 661 + 7, "spread syntax 33");
+check(syntaxObj33.method33(9) === 661 + 9, "method syntax 33");
+check(syntaxObj33.slot33 === 661 + 8, "getter syntax 33");
+syntaxObj33.slot33 = 661 + 10;
+check(setterSink33 === 661 + 10, "setter syntax 33");
+
+var shorthand34 = 681 + 1;
+var computedKey34 = "computed_34";
+var setterSink34 = 0;
+var syntaxObj34 = {
+shorthand34,
+plain34: 681,
+"string-34": 681 + 2,
+1034: 681 + 3,
+[computedKey34]: 681 + 4,
+...makeSpread(681),
+method34(delta) { return this.plain34 + delta; },
+get slot34() { return this.plain34 + 8; },
+set slot34(value) { setterSink34 = value; },
+};
+check(syntaxObj34.shorthand34 === 681 + 1, "shorthand syntax 34");
+check(syntaxObj34.plain34 === 681, "plain syntax 34");
+check(syntaxObj34["string-34"] === 681 + 2, "string key syntax 34");
+check(syntaxObj34[1034] === 681 + 3, "numeric key syntax 34");
+check(syntaxObj34[computedKey34] === 681 + 4, "computed key syntax 34");
+check(syntaxObj34.spreadValue === 681 + 6 && syntaxObj34.shared === 681 + 7, "spread syntax 34");
+check(syntaxObj34.method34(9) === 681 + 9, "method syntax 34");
+check(syntaxObj34.slot34 === 681 + 8, "getter syntax 34");
+syntaxObj34.slot34 = 681 + 10;
+check(setterSink34 === 681 + 10, "setter syntax 34");
+
+var shorthand35 = 701 + 1;
+var computedKey35 = "computed_35";
+var setterSink35 = 0;
+var syntaxObj35 = {
+shorthand35,
+plain35: 701,
+"string-35": 701 + 2,
+1035: 701 + 3,
+[computedKey35]: 701 + 4,
+...makeSpread(701),
+method35(delta) { return this.plain35 + delta; },
+get slot35() { return this.plain35 + 8; },
+set slot35(value) { setterSink35 = value; },
+};
+check(syntaxObj35.shorthand35 === 701 + 1, "shorthand syntax 35");
+check(syntaxObj35.plain35 === 701, "plain syntax 35");
+check(syntaxObj35["string-35"] === 701 + 2, "string key syntax 35");
+check(syntaxObj35[1035] === 701 + 3, "numeric key syntax 35");
+check(syntaxObj35[computedKey35] === 701 + 4, "computed key syntax 35");
+check(syntaxObj35.spreadValue === 701 + 6 && syntaxObj35.shared === 701 + 7, "spread syntax 35");
+check(syntaxObj35.method35(9) === 701 + 9, "method syntax 35");
+check(syntaxObj35.slot35 === 701 + 8, "getter syntax 35");
+syntaxObj35.slot35 = 701 + 10;
+check(setterSink35 === 701 + 10, "setter syntax 35");
+
+var shorthand36 = 721 + 1;
+var computedKey36 = "computed_36";
+var setterSink36 = 0;
+var syntaxObj36 = {
+shorthand36,
+plain36: 721,
+"string-36": 721 + 2,
+1036: 721 + 3,
+[computedKey36]: 721 + 4,
+...makeSpread(721),
+method36(delta) { return this.plain36 + delta; },
+get slot36() { return this.plain36 + 8; },
+set slot36(value) { setterSink36 = value; },
+};
+check(syntaxObj36.shorthand36 === 721 + 1, "shorthand syntax 36");
+check(syntaxObj36.plain36 === 721, "plain syntax 36");
+check(syntaxObj36["string-36"] === 721 + 2, "string key syntax 36");
+check(syntaxObj36[1036] === 721 + 3, "numeric key syntax 36");
+check(syntaxObj36[computedKey36] === 721 + 4, "computed key syntax 36");
+check(syntaxObj36.spreadValue === 721 + 6 && syntaxObj36.shared === 721 + 7, "spread syntax 36");
+check(syntaxObj36.method36(9) === 721 + 9, "method syntax 36");
+check(syntaxObj36.slot36 === 721 + 8, "getter syntax 36");
+syntaxObj36.slot36 = 721 + 10;
+check(setterSink36 === 721 + 10, "setter syntax 36");
+
+var shorthand37 = 741 + 1;
+var computedKey37 = "computed_37";
+var setterSink37 = 0;
+var syntaxObj37 = {
+shorthand37,
+plain37: 741,
+"string-37": 741 + 2,
+1037: 741 + 3,
+[computedKey37]: 741 + 4,
+...makeSpread(741),
+method37(delta) { return this.plain37 + delta; },
+get slot37() { return this.plain37 + 8; },
+set slot37(value) { setterSink37 = value; },
+};
+check(syntaxObj37.shorthand37 === 741 + 1, "shorthand syntax 37");
+check(syntaxObj37.plain37 === 741, "plain syntax 37");
+check(syntaxObj37["string-37"] === 741 + 2, "string key syntax 37");
+check(syntaxObj37[1037] === 741 + 3, "numeric key syntax 37");
+check(syntaxObj37[computedKey37] === 741 + 4, "computed key syntax 37");
+check(syntaxObj37.spreadValue === 741 + 6 && syntaxObj37.shared === 741 + 7, "spread syntax 37");
+check(syntaxObj37.method37(9) === 741 + 9, "method syntax 37");
+check(syntaxObj37.slot37 === 741 + 8, "getter syntax 37");
+syntaxObj37.slot37 = 741 + 10;
+check(setterSink37 === 741 + 10, "setter syntax 37");
+
+var shorthand38 = 761 + 1;
+var computedKey38 = "computed_38";
+var setterSink38 = 0;
+var syntaxObj38 = {
+shorthand38,
+plain38: 761,
+"string-38": 761 + 2,
+1038: 761 + 3,
+[computedKey38]: 761 + 4,
+...makeSpread(761),
+method38(delta) { return this.plain38 + delta; },
+get slot38() { return this.plain38 + 8; },
+set slot38(value) { setterSink38 = value; },
+};
+check(syntaxObj38.shorthand38 === 761 + 1, "shorthand syntax 38");
+check(syntaxObj38.plain38 === 761, "plain syntax 38");
+check(syntaxObj38["string-38"] === 761 + 2, "string key syntax 38");
+check(syntaxObj38[1038] === 761 + 3, "numeric key syntax 38");
+check(syntaxObj38[computedKey38] === 761 + 4, "computed key syntax 38");
+check(syntaxObj38.spreadValue === 761 + 6 && syntaxObj38.shared === 761 + 7, "spread syntax 38");
+check(syntaxObj38.method38(9) === 761 + 9, "method syntax 38");
+check(syntaxObj38.slot38 === 761 + 8, "getter syntax 38");
+syntaxObj38.slot38 = 761 + 10;
+check(setterSink38 === 761 + 10, "setter syntax 38");
+
+var shorthand39 = 781 + 1;
+var computedKey39 = "computed_39";
+var setterSink39 = 0;
+var syntaxObj39 = {
+shorthand39,
+plain39: 781,
+"string-39": 781 + 2,
+1039: 781 + 3,
+[computedKey39]: 781 + 4,
+...makeSpread(781),
+method39(delta) { return this.plain39 + delta; },
+get slot39() { return this.plain39 + 8; },
+set slot39(value) { setterSink39 = value; },
+};
+check(syntaxObj39.shorthand39 === 781 + 1, "shorthand syntax 39");
+check(syntaxObj39.plain39 === 781, "plain syntax 39");
+check(syntaxObj39["string-39"] === 781 + 2, "string key syntax 39");
+check(syntaxObj39[1039] === 781 + 3, "numeric key syntax 39");
+check(syntaxObj39[computedKey39] === 781 + 4, "computed key syntax 39");
+check(syntaxObj39.spreadValue === 781 + 6 && syntaxObj39.shared === 781 + 7, "spread syntax 39");
+check(syntaxObj39.method39(9) === 781 + 9, "method syntax 39");
+check(syntaxObj39.slot39 === 781 + 8, "getter syntax 39");
+syntaxObj39.slot39 = 781 + 10;
+check(setterSink39 === 781 + 10, "setter syntax 39");
+
+var shorthand40 = 801 + 1;
+var computedKey40 = "computed_40";
+var setterSink40 = 0;
+var syntaxObj40 = {
+shorthand40,
+plain40: 801,
+"string-40": 801 + 2,
+1040: 801 + 3,
+[computedKey40]: 801 + 4,
+...makeSpread(801),
+method40(delta) { return this.plain40 + delta; },
+get slot40() { return this.plain40 + 8; },
+set slot40(value) { setterSink40 = value; },
+};
+check(syntaxObj40.shorthand40 === 801 + 1, "shorthand syntax 40");
+check(syntaxObj40.plain40 === 801, "plain syntax 40");
+check(syntaxObj40["string-40"] === 801 + 2, "string key syntax 40");
+check(syntaxObj40[1040] === 801 + 3, "numeric key syntax 40");
+check(syntaxObj40[computedKey40] === 801 + 4, "computed key syntax 40");
+check(syntaxObj40.spreadValue === 801 + 6 && syntaxObj40.shared === 801 + 7, "spread syntax 40");
+check(syntaxObj40.method40(9) === 801 + 9, "method syntax 40");
+check(syntaxObj40.slot40 === 801 + 8, "getter syntax 40");
+syntaxObj40.slot40 = 801 + 10;
+check(setterSink40 === 801 + 10, "setter syntax 40");
+
+var shorthand41 = 821 + 1;
+var computedKey41 = "computed_41";
+var setterSink41 = 0;
+var syntaxObj41 = {
+shorthand41,
+plain41: 821,
+"string-41": 821 + 2,
+1041: 821 + 3,
+[computedKey41]: 821 + 4,
+...makeSpread(821),
+method41(delta) { return this.plain41 + delta; },
+get slot41() { return this.plain41 + 8; },
+set slot41(value) { setterSink41 = value; },
+};
+check(syntaxObj41.shorthand41 === 821 + 1, "shorthand syntax 41");
+check(syntaxObj41.plain41 === 821, "plain syntax 41");
+check(syntaxObj41["string-41"] === 821 + 2, "string key syntax 41");
+check(syntaxObj41[1041] === 821 + 3, "numeric key syntax 41");
+check(syntaxObj41[computedKey41] === 821 + 4, "computed key syntax 41");
+check(syntaxObj41.spreadValue === 821 + 6 && syntaxObj41.shared === 821 + 7, "spread syntax 41");
+check(syntaxObj41.method41(9) === 821 + 9, "method syntax 41");
+check(syntaxObj41.slot41 === 821 + 8, "getter syntax 41");
+syntaxObj41.slot41 = 821 + 10;
+check(setterSink41 === 821 + 10, "setter syntax 41");
+
+var shorthand42 = 841 + 1;
+var computedKey42 = "computed_42";
+var setterSink42 = 0;
+var syntaxObj42 = {
+shorthand42,
+plain42: 841,
+"string-42": 841 + 2,
+1042: 841 + 3,
+[computedKey42]: 841 + 4,
+...makeSpread(841),
+method42(delta) { return this.plain42 + delta; },
+get slot42() { return this.plain42 + 8; },
+set slot42(value) { setterSink42 = value; },
+};
+check(syntaxObj42.shorthand42 === 841 + 1, "shorthand syntax 42");
+check(syntaxObj42.plain42 === 841, "plain syntax 42");
+check(syntaxObj42["string-42"] === 841 + 2, "string key syntax 42");
+check(syntaxObj42[1042] === 841 + 3, "numeric key syntax 42");
+check(syntaxObj42[computedKey42] === 841 + 4, "computed key syntax 42");
+check(syntaxObj42.spreadValue === 841 + 6 && syntaxObj42.shared === 841 + 7, "spread syntax 42");
+check(syntaxObj42.method42(9) === 841 + 9, "method syntax 42");
+check(syntaxObj42.slot42 === 841 + 8, "getter syntax 42");
+syntaxObj42.slot42 = 841 + 10;
+check(setterSink42 === 841 + 10, "setter syntax 42");
+
+var shorthand43 = 861 + 1;
+var computedKey43 = "computed_43";
+var setterSink43 = 0;
+var syntaxObj43 = {
+shorthand43,
+plain43: 861,
+"string-43": 861 + 2,
+1043: 861 + 3,
+[computedKey43]: 861 + 4,
+...makeSpread(861),
+method43(delta) { return this.plain43 + delta; },
+get slot43() { return this.plain43 + 8; },
+set slot43(value) { setterSink43 = value; },
+};
+check(syntaxObj43.shorthand43 === 861 + 1, "shorthand syntax 43");
+check(syntaxObj43.plain43 === 861, "plain syntax 43");
+check(syntaxObj43["string-43"] === 861 + 2, "string key syntax 43");
+check(syntaxObj43[1043] === 861 + 3, "numeric key syntax 43");
+check(syntaxObj43[computedKey43] === 861 + 4, "computed key syntax 43");
+check(syntaxObj43.spreadValue === 861 + 6 && syntaxObj43.shared === 861 + 7, "spread syntax 43");
+check(syntaxObj43.method43(9) === 861 + 9, "method syntax 43");
+check(syntaxObj43.slot43 === 861 + 8, "getter syntax 43");
+syntaxObj43.slot43 = 861 + 10;
+check(setterSink43 === 861 + 10, "setter syntax 43");
+
+var shorthand44 = 881 + 1;
+var computedKey44 = "computed_44";
+var setterSink44 = 0;
+var syntaxObj44 = {
+shorthand44,
+plain44: 881,
+"string-44": 881 + 2,
+1044: 881 + 3,
+[computedKey44]: 881 + 4,
+...makeSpread(881),
+method44(delta) { return this.plain44 + delta; },
+get slot44() { return this.plain44 + 8; },
+set slot44(value) { setterSink44 = value; },
+};
+check(syntaxObj44.shorthand44 === 881 + 1, "shorthand syntax 44");
+check(syntaxObj44.plain44 === 881, "plain syntax 44");
+check(syntaxObj44["string-44"] === 881 + 2, "string key syntax 44");
+check(syntaxObj44[1044] === 881 + 3, "numeric key syntax 44");
+check(syntaxObj44[computedKey44] === 881 + 4, "computed key syntax 44");
+check(syntaxObj44.spreadValue === 881 + 6 && syntaxObj44.shared === 881 + 7, "spread syntax 44");
+check(syntaxObj44.method44(9) === 881 + 9, "method syntax 44");
+check(syntaxObj44.slot44 === 881 + 8, "getter syntax 44");
+syntaxObj44.slot44 = 881 + 10;
+check(setterSink44 === 881 + 10, "setter syntax 44");
+
+var shorthand45 = 901 + 1;
+var computedKey45 = "computed_45";
+var setterSink45 = 0;
+var syntaxObj45 = {
+shorthand45,
+plain45: 901,
+"string-45": 901 + 2,
+1045: 901 + 3,
+[computedKey45]: 901 + 4,
+...makeSpread(901),
+method45(delta) { return this.plain45 + delta; },
+get slot45() { return this.plain45 + 8; },
+set slot45(value) { setterSink45 = value; },
+};
+check(syntaxObj45.shorthand45 === 901 + 1, "shorthand syntax 45");
+check(syntaxObj45.plain45 === 901, "plain syntax 45");
+check(syntaxObj45["string-45"] === 901 + 2, "string key syntax 45");
+check(syntaxObj45[1045] === 901 + 3, "numeric key syntax 45");
+check(syntaxObj45[computedKey45] === 901 + 4, "computed key syntax 45");
+check(syntaxObj45.spreadValue === 901 + 6 && syntaxObj45.shared === 901 + 7, "spread syntax 45");
+check(syntaxObj45.method45(9) === 901 + 9, "method syntax 45");
+check(syntaxObj45.slot45 === 901 + 8, "getter syntax 45");
+syntaxObj45.slot45 = 901 + 10;
+check(setterSink45 === 901 + 10, "setter syntax 45");
+
+var shorthand46 = 921 + 1;
+var computedKey46 = "computed_46";
+var setterSink46 = 0;
+var syntaxObj46 = {
+shorthand46,
+plain46: 921,
+"string-46": 921 + 2,
+1046: 921 + 3,
+[computedKey46]: 921 + 4,
+...makeSpread(921),
+method46(delta) { return this.plain46 + delta; },
+get slot46() { return this.plain46 + 8; },
+set slot46(value) { setterSink46 = value; },
+};
+check(syntaxObj46.shorthand46 === 921 + 1, "shorthand syntax 46");
+check(syntaxObj46.plain46 === 921, "plain syntax 46");
+check(syntaxObj46["string-46"] === 921 + 2, "string key syntax 46");
+check(syntaxObj46[1046] === 921 + 3, "numeric key syntax 46");
+check(syntaxObj46[computedKey46] === 921 + 4, "computed key syntax 46");
+check(syntaxObj46.spreadValue === 921 + 6 && syntaxObj46.shared === 921 + 7, "spread syntax 46");
+check(syntaxObj46.method46(9) === 921 + 9, "method syntax 46");
+check(syntaxObj46.slot46 === 921 + 8, "getter syntax 46");
+syntaxObj46.slot46 = 921 + 10;
+check(setterSink46 === 921 + 10, "setter syntax 46");
+
+var shorthand47 = 941 + 1;
+var computedKey47 = "computed_47";
+var setterSink47 = 0;
+var syntaxObj47 = {
+shorthand47,
+plain47: 941,
+"string-47": 941 + 2,
+1047: 941 + 3,
+[computedKey47]: 941 + 4,
+...makeSpread(941),
+method47(delta) { return this.plain47 + delta; },
+get slot47() { return this.plain47 + 8; },
+set slot47(value) { setterSink47 = value; },
+};
+check(syntaxObj47.shorthand47 === 941 + 1, "shorthand syntax 47");
+check(syntaxObj47.plain47 === 941, "plain syntax 47");
+check(syntaxObj47["string-47"] === 941 + 2, "string key syntax 47");
+check(syntaxObj47[1047] === 941 + 3, "numeric key syntax 47");
+check(syntaxObj47[computedKey47] === 941 + 4, "computed key syntax 47");
+check(syntaxObj47.spreadValue === 941 + 6 && syntaxObj47.shared === 941 + 7, "spread syntax 47");
+check(syntaxObj47.method47(9) === 941 + 9, "method syntax 47");
+check(syntaxObj47.slot47 === 941 + 8, "getter syntax 47");
+syntaxObj47.slot47 = 941 + 10;
+check(setterSink47 === 941 + 10, "setter syntax 47");
+
+var shorthand48 = 961 + 1;
+var computedKey48 = "computed_48";
+var setterSink48 = 0;
+var syntaxObj48 = {
+shorthand48,
+plain48: 961,
+"string-48": 961 + 2,
+1048: 961 + 3,
+[computedKey48]: 961 + 4,
+...makeSpread(961),
+method48(delta) { return this.plain48 + delta; },
+get slot48() { return this.plain48 + 8; },
+set slot48(value) { setterSink48 = value; },
+};
+check(syntaxObj48.shorthand48 === 961 + 1, "shorthand syntax 48");
+check(syntaxObj48.plain48 === 961, "plain syntax 48");
+check(syntaxObj48["string-48"] === 961 + 2, "string key syntax 48");
+check(syntaxObj48[1048] === 961 + 3, "numeric key syntax 48");
+check(syntaxObj48[computedKey48] === 961 + 4, "computed key syntax 48");
+check(syntaxObj48.spreadValue === 961 + 6 && syntaxObj48.shared === 961 + 7, "spread syntax 48");
+check(syntaxObj48.method48(9) === 961 + 9, "method syntax 48");
+check(syntaxObj48.slot48 === 961 + 8, "getter syntax 48");
+syntaxObj48.slot48 = 961 + 10;
+check(setterSink48 === 961 + 10, "setter syntax 48");
+
+var shorthand49 = 981 + 1;
+var computedKey49 = "computed_49";
+var setterSink49 = 0;
+var syntaxObj49 = {
+shorthand49,
+plain49: 981,
+"string-49": 981 + 2,
+1049: 981 + 3,
+[computedKey49]: 981 + 4,
+...makeSpread(981),
+method49(delta) { return this.plain49 + delta; },
+get slot49() { return this.plain49 + 8; },
+set slot49(value) { setterSink49 = value; },
+};
+check(syntaxObj49.shorthand49 === 981 + 1, "shorthand syntax 49");
+check(syntaxObj49.plain49 === 981, "plain syntax 49");
+check(syntaxObj49["string-49"] === 981 + 2, "string key syntax 49");
+check(syntaxObj49[1049] === 981 + 3, "numeric key syntax 49");
+check(syntaxObj49[computedKey49] === 981 + 4, "computed key syntax 49");
+check(syntaxObj49.spreadValue === 981 + 6 && syntaxObj49.shared === 981 + 7, "spread syntax 49");
+check(syntaxObj49.method49(9) === 981 + 9, "method syntax 49");
+check(syntaxObj49.slot49 === 981 + 8, "getter syntax 49");
+syntaxObj49.slot49 = 981 + 10;
+check(setterSink49 === 981 + 10, "setter syntax 49");
+
+var shorthand50 = 1001 + 1;
+var computedKey50 = "computed_50";
+var setterSink50 = 0;
+var syntaxObj50 = {
+shorthand50,
+plain50: 1001,
+"string-50": 1001 + 2,
+1050: 1001 + 3,
+[computedKey50]: 1001 + 4,
+...makeSpread(1001),
+method50(delta) { return this.plain50 + delta; },
+get slot50() { return this.plain50 + 8; },
+set slot50(value) { setterSink50 = value; },
+};
+check(syntaxObj50.shorthand50 === 1001 + 1, "shorthand syntax 50");
+check(syntaxObj50.plain50 === 1001, "plain syntax 50");
+check(syntaxObj50["string-50"] === 1001 + 2, "string key syntax 50");
+check(syntaxObj50[1050] === 1001 + 3, "numeric key syntax 50");
+check(syntaxObj50[computedKey50] === 1001 + 4, "computed key syntax 50");
+check(syntaxObj50.spreadValue === 1001 + 6 && syntaxObj50.shared === 1001 + 7, "spread syntax 50");
+check(syntaxObj50.method50(9) === 1001 + 9, "method syntax 50");
+check(syntaxObj50.slot50 === 1001 + 8, "getter syntax 50");
+syntaxObj50.slot50 = 1001 + 10;
+check(setterSink50 === 1001 + 10, "setter syntax 50");
+
+var shorthand51 = 1021 + 1;
+var computedKey51 = "computed_51";
+var setterSink51 = 0;
+var syntaxObj51 = {
+shorthand51,
+plain51: 1021,
+"string-51": 1021 + 2,
+1051: 1021 + 3,
+[computedKey51]: 1021 + 4,
+...makeSpread(1021),
+method51(delta) { return this.plain51 + delta; },
+get slot51() { return this.plain51 + 8; },
+set slot51(value) { setterSink51 = value; },
+};
+check(syntaxObj51.shorthand51 === 1021 + 1, "shorthand syntax 51");
+check(syntaxObj51.plain51 === 1021, "plain syntax 51");
+check(syntaxObj51["string-51"] === 1021 + 2, "string key syntax 51");
+check(syntaxObj51[1051] === 1021 + 3, "numeric key syntax 51");
+check(syntaxObj51[computedKey51] === 1021 + 4, "computed key syntax 51");
+check(syntaxObj51.spreadValue === 1021 + 6 && syntaxObj51.shared === 1021 + 7, "spread syntax 51");
+check(syntaxObj51.method51(9) === 1021 + 9, "method syntax 51");
+check(syntaxObj51.slot51 === 1021 + 8, "getter syntax 51");
+syntaxObj51.slot51 = 1021 + 10;
+check(setterSink51 === 1021 + 10, "setter syntax 51");
+
+var shorthand52 = 1041 + 1;
+var computedKey52 = "computed_52";
+var setterSink52 = 0;
+var syntaxObj52 = {
+shorthand52,
+plain52: 1041,
+"string-52": 1041 + 2,
+1052: 1041 + 3,
+[computedKey52]: 1041 + 4,
+...makeSpread(1041),
+method52(delta) { return this.plain52 + delta; },
+get slot52() { return this.plain52 + 8; },
+set slot52(value) { setterSink52 = value; },
+};
+check(syntaxObj52.shorthand52 === 1041 + 1, "shorthand syntax 52");
+check(syntaxObj52.plain52 === 1041, "plain syntax 52");
+check(syntaxObj52["string-52"] === 1041 + 2, "string key syntax 52");
+check(syntaxObj52[1052] === 1041 + 3, "numeric key syntax 52");
+check(syntaxObj52[computedKey52] === 1041 + 4, "computed key syntax 52");
+check(syntaxObj52.spreadValue === 1041 + 6 && syntaxObj52.shared === 1041 + 7, "spread syntax 52");
+check(syntaxObj52.method52(9) === 1041 + 9, "method syntax 52");
+check(syntaxObj52.slot52 === 1041 + 8, "getter syntax 52");
+syntaxObj52.slot52 = 1041 + 10;
+check(setterSink52 === 1041 + 10, "setter syntax 52");
+
+var shorthand53 = 1061 + 1;
+var computedKey53 = "computed_53";
+var setterSink53 = 0;
+var syntaxObj53 = {
+shorthand53,
+plain53: 1061,
+"string-53": 1061 + 2,
+1053: 1061 + 3,
+[computedKey53]: 1061 + 4,
+...makeSpread(1061),
+method53(delta) { return this.plain53 + delta; },
+get slot53() { return this.plain53 + 8; },
+set slot53(value) { setterSink53 = value; },
+};
+check(syntaxObj53.shorthand53 === 1061 + 1, "shorthand syntax 53");
+check(syntaxObj53.plain53 === 1061, "plain syntax 53");
+check(syntaxObj53["string-53"] === 1061 + 2, "string key syntax 53");
+check(syntaxObj53[1053] === 1061 + 3, "numeric key syntax 53");
+check(syntaxObj53[computedKey53] === 1061 + 4, "computed key syntax 53");
+check(syntaxObj53.spreadValue === 1061 + 6 && syntaxObj53.shared === 1061 + 7, "spread syntax 53");
+check(syntaxObj53.method53(9) === 1061 + 9, "method syntax 53");
+check(syntaxObj53.slot53 === 1061 + 8, "getter syntax 53");
+syntaxObj53.slot53 = 1061 + 10;
+check(setterSink53 === 1061 + 10, "setter syntax 53");
+
+var shorthand54 = 1081 + 1;
+var computedKey54 = "computed_54";
+var setterSink54 = 0;
+var syntaxObj54 = {
+shorthand54,
+plain54: 1081,
+"string-54": 1081 + 2,
+1054: 1081 + 3,
+[computedKey54]: 1081 + 4,
+...makeSpread(1081),
+method54(delta) { return this.plain54 + delta; },
+get slot54() { return this.plain54 + 8; },
+set slot54(value) { setterSink54 = value; },
+};
+check(syntaxObj54.shorthand54 === 1081 + 1, "shorthand syntax 54");
+check(syntaxObj54.plain54 === 1081, "plain syntax 54");
+check(syntaxObj54["string-54"] === 1081 + 2, "string key syntax 54");
+check(syntaxObj54[1054] === 1081 + 3, "numeric key syntax 54");
+check(syntaxObj54[computedKey54] === 1081 + 4, "computed key syntax 54");
+check(syntaxObj54.spreadValue === 1081 + 6 && syntaxObj54.shared === 1081 + 7, "spread syntax 54");
+check(syntaxObj54.method54(9) === 1081 + 9, "method syntax 54");
+check(syntaxObj54.slot54 === 1081 + 8, "getter syntax 54");
+syntaxObj54.slot54 = 1081 + 10;
+check(setterSink54 === 1081 + 10, "setter syntax 54");
+
+var shorthand55 = 1101 + 1;
+var computedKey55 = "computed_55";
+var setterSink55 = 0;
+var syntaxObj55 = {
+shorthand55,
+plain55: 1101,
+"string-55": 1101 + 2,
+1055: 1101 + 3,
+[computedKey55]: 1101 + 4,
+...makeSpread(1101),
+method55(delta) { return this.plain55 + delta; },
+get slot55() { return this.plain55 + 8; },
+set slot55(value) { setterSink55 = value; },
+};
+check(syntaxObj55.shorthand55 === 1101 + 1, "shorthand syntax 55");
+check(syntaxObj55.plain55 === 1101, "plain syntax 55");
+check(syntaxObj55["string-55"] === 1101 + 2, "string key syntax 55");
+check(syntaxObj55[1055] === 1101 + 3, "numeric key syntax 55");
+check(syntaxObj55[computedKey55] === 1101 + 4, "computed key syntax 55");
+check(syntaxObj55.spreadValue === 1101 + 6 && syntaxObj55.shared === 1101 + 7, "spread syntax 55");
+check(syntaxObj55.method55(9) === 1101 + 9, "method syntax 55");
+check(syntaxObj55.slot55 === 1101 + 8, "getter syntax 55");
+syntaxObj55.slot55 = 1101 + 10;
+check(setterSink55 === 1101 + 10, "setter syntax 55");
+
+var shorthand56 = 1121 + 1;
+var computedKey56 = "computed_56";
+var setterSink56 = 0;
+var syntaxObj56 = {
+shorthand56,
+plain56: 1121,
+"string-56": 1121 + 2,
+1056: 1121 + 3,
+[computedKey56]: 1121 + 4,
+...makeSpread(1121),
+method56(delta) { return this.plain56 + delta; },
+get slot56() { return this.plain56 + 8; },
+set slot56(value) { setterSink56 = value; },
+};
+check(syntaxObj56.shorthand56 === 1121 + 1, "shorthand syntax 56");
+check(syntaxObj56.plain56 === 1121, "plain syntax 56");
+check(syntaxObj56["string-56"] === 1121 + 2, "string key syntax 56");
+check(syntaxObj56[1056] === 1121 + 3, "numeric key syntax 56");
+check(syntaxObj56[computedKey56] === 1121 + 4, "computed key syntax 56");
+check(syntaxObj56.spreadValue === 1121 + 6 && syntaxObj56.shared === 1121 + 7, "spread syntax 56");
+check(syntaxObj56.method56(9) === 1121 + 9, "method syntax 56");
+check(syntaxObj56.slot56 === 1121 + 8, "getter syntax 56");
+syntaxObj56.slot56 = 1121 + 10;
+check(setterSink56 === 1121 + 10, "setter syntax 56");
+
+var shorthand57 = 1141 + 1;
+var computedKey57 = "computed_57";
+var setterSink57 = 0;
+var syntaxObj57 = {
+shorthand57,
+plain57: 1141,
+"string-57": 1141 + 2,
+1057: 1141 + 3,
+[computedKey57]: 1141 + 4,
+...makeSpread(1141),
+method57(delta) { return this.plain57 + delta; },
+get slot57() { return this.plain57 + 8; },
+set slot57(value) { setterSink57 = value; },
+};
+check(syntaxObj57.shorthand57 === 1141 + 1, "shorthand syntax 57");
+check(syntaxObj57.plain57 === 1141, "plain syntax 57");
+check(syntaxObj57["string-57"] === 1141 + 2, "string key syntax 57");
+check(syntaxObj57[1057] === 1141 + 3, "numeric key syntax 57");
+check(syntaxObj57[computedKey57] === 1141 + 4, "computed key syntax 57");
+check(syntaxObj57.spreadValue === 1141 + 6 && syntaxObj57.shared === 1141 + 7, "spread syntax 57");
+check(syntaxObj57.method57(9) === 1141 + 9, "method syntax 57");
+check(syntaxObj57.slot57 === 1141 + 8, "getter syntax 57");
+syntaxObj57.slot57 = 1141 + 10;
+check(setterSink57 === 1141 + 10, "setter syntax 57");
+
+var shorthand58 = 1161 + 1;
+var computedKey58 = "computed_58";
+var setterSink58 = 0;
+var syntaxObj58 = {
+shorthand58,
+plain58: 1161,
+"string-58": 1161 + 2,
+1058: 1161 + 3,
+[computedKey58]: 1161 + 4,
+...makeSpread(1161),
+method58(delta) { return this.plain58 + delta; },
+get slot58() { return this.plain58 + 8; },
+set slot58(value) { setterSink58 = value; },
+};
+check(syntaxObj58.shorthand58 === 1161 + 1, "shorthand syntax 58");
+check(syntaxObj58.plain58 === 1161, "plain syntax 58");
+check(syntaxObj58["string-58"] === 1161 + 2, "string key syntax 58");
+check(syntaxObj58[1058] === 1161 + 3, "numeric key syntax 58");
+check(syntaxObj58[computedKey58] === 1161 + 4, "computed key syntax 58");
+check(syntaxObj58.spreadValue === 1161 + 6 && syntaxObj58.shared === 1161 + 7, "spread syntax 58");
+check(syntaxObj58.method58(9) === 1161 + 9, "method syntax 58");
+check(syntaxObj58.slot58 === 1161 + 8, "getter syntax 58");
+syntaxObj58.slot58 = 1161 + 10;
+check(setterSink58 === 1161 + 10, "setter syntax 58");
+
+var shorthand59 = 1181 + 1;
+var computedKey59 = "computed_59";
+var setterSink59 = 0;
+var syntaxObj59 = {
+shorthand59,
+plain59: 1181,
+"string-59": 1181 + 2,
+1059: 1181 + 3,
+[computedKey59]: 1181 + 4,
+...makeSpread(1181),
+method59(delta) { return this.plain59 + delta; },
+get slot59() { return this.plain59 + 8; },
+set slot59(value) { setterSink59 = value; },
+};
+check(syntaxObj59.shorthand59 === 1181 + 1, "shorthand syntax 59");
+check(syntaxObj59.plain59 === 1181, "plain syntax 59");
+check(syntaxObj59["string-59"] === 1181 + 2, "string key syntax 59");
+check(syntaxObj59[1059] === 1181 + 3, "numeric key syntax 59");
+check(syntaxObj59[computedKey59] === 1181 + 4, "computed key syntax 59");
+check(syntaxObj59.spreadValue === 1181 + 6 && syntaxObj59.shared === 1181 + 7, "spread syntax 59");
+check(syntaxObj59.method59(9) === 1181 + 9, "method syntax 59");
+check(syntaxObj59.slot59 === 1181 + 8, "getter syntax 59");
+syntaxObj59.slot59 = 1181 + 10;
+check(setterSink59 === 1181 + 10, "setter syntax 59");
+
+var shorthand60 = 1201 + 1;
+var computedKey60 = "computed_60";
+var setterSink60 = 0;
+var syntaxObj60 = {
+shorthand60,
+plain60: 1201,
+"string-60": 1201 + 2,
+1060: 1201 + 3,
+[computedKey60]: 1201 + 4,
+...makeSpread(1201),
+method60(delta) { return this.plain60 + delta; },
+get slot60() { return this.plain60 + 8; },
+set slot60(value) { setterSink60 = value; },
+};
+check(syntaxObj60.shorthand60 === 1201 + 1, "shorthand syntax 60");
+check(syntaxObj60.plain60 === 1201, "plain syntax 60");
+check(syntaxObj60["string-60"] === 1201 + 2, "string key syntax 60");
+check(syntaxObj60[1060] === 1201 + 3, "numeric key syntax 60");
+check(syntaxObj60[computedKey60] === 1201 + 4, "computed key syntax 60");
+check(syntaxObj60.spreadValue === 1201 + 6 && syntaxObj60.shared === 1201 + 7, "spread syntax 60");
+check(syntaxObj60.method60(9) === 1201 + 9, "method syntax 60");
+check(syntaxObj60.slot60 === 1201 + 8, "getter syntax 60");
+syntaxObj60.slot60 = 1201 + 10;
+check(setterSink60 === 1201 + 10, "setter syntax 60");
+
+var shorthand61 = 1221 + 1;
+var computedKey61 = "computed_61";
+var setterSink61 = 0;
+var syntaxObj61 = {
+shorthand61,
+plain61: 1221,
+"string-61": 1221 + 2,
+1061: 1221 + 3,
+[computedKey61]: 1221 + 4,
+...makeSpread(1221),
+method61(delta) { return this.plain61 + delta; },
+get slot61() { return this.plain61 + 8; },
+set slot61(value) { setterSink61 = value; },
+};
+check(syntaxObj61.shorthand61 === 1221 + 1, "shorthand syntax 61");
+check(syntaxObj61.plain61 === 1221, "plain syntax 61");
+check(syntaxObj61["string-61"] === 1221 + 2, "string key syntax 61");
+check(syntaxObj61[1061] === 1221 + 3, "numeric key syntax 61");
+check(syntaxObj61[computedKey61] === 1221 + 4, "computed key syntax 61");
+check(syntaxObj61.spreadValue === 1221 + 6 && syntaxObj61.shared === 1221 + 7, "spread syntax 61");
+check(syntaxObj61.method61(9) === 1221 + 9, "method syntax 61");
+check(syntaxObj61.slot61 === 1221 + 8, "getter syntax 61");
+syntaxObj61.slot61 = 1221 + 10;
+check(setterSink61 === 1221 + 10, "setter syntax 61");
+
+var shorthand62 = 1241 + 1;
+var computedKey62 = "computed_62";
+var setterSink62 = 0;
+var syntaxObj62 = {
+shorthand62,
+plain62: 1241,
+"string-62": 1241 + 2,
+1062: 1241 + 3,
+[computedKey62]: 1241 + 4,
+...makeSpread(1241),
+method62(delta) { return this.plain62 + delta; },
+get slot62() { return this.plain62 + 8; },
+set slot62(value) { setterSink62 = value; },
+};
+check(syntaxObj62.shorthand62 === 1241 + 1, "shorthand syntax 62");
+check(syntaxObj62.plain62 === 1241, "plain syntax 62");
+check(syntaxObj62["string-62"] === 1241 + 2, "string key syntax 62");
+check(syntaxObj62[1062] === 1241 + 3, "numeric key syntax 62");
+check(syntaxObj62[computedKey62] === 1241 + 4, "computed key syntax 62");
+check(syntaxObj62.spreadValue === 1241 + 6 && syntaxObj62.shared === 1241 + 7, "spread syntax 62");
+check(syntaxObj62.method62(9) === 1241 + 9, "method syntax 62");
+check(syntaxObj62.slot62 === 1241 + 8, "getter syntax 62");
+syntaxObj62.slot62 = 1241 + 10;
+check(setterSink62 === 1241 + 10, "setter syntax 62");
+
+var shorthand63 = 1261 + 1;
+var computedKey63 = "computed_63";
+var setterSink63 = 0;
+var syntaxObj63 = {
+shorthand63,
+plain63: 1261,
+"string-63": 1261 + 2,
+1063: 1261 + 3,
+[computedKey63]: 1261 + 4,
+...makeSpread(1261),
+method63(delta) { return this.plain63 + delta; },
+get slot63() { return this.plain63 + 8; },
+set slot63(value) { setterSink63 = value; },
+};
+check(syntaxObj63.shorthand63 === 1261 + 1, "shorthand syntax 63");
+check(syntaxObj63.plain63 === 1261, "plain syntax 63");
+check(syntaxObj63["string-63"] === 1261 + 2, "string key syntax 63");
+check(syntaxObj63[1063] === 1261 + 3, "numeric key syntax 63");
+check(syntaxObj63[computedKey63] === 1261 + 4, "computed key syntax 63");
+check(syntaxObj63.spreadValue === 1261 + 6 && syntaxObj63.shared === 1261 + 7, "spread syntax 63");
+check(syntaxObj63.method63(9) === 1261 + 9, "method syntax 63");
+check(syntaxObj63.slot63 === 1261 + 8, "getter syntax 63");
+syntaxObj63.slot63 = 1261 + 10;
+check(setterSink63 === 1261 + 10, "setter syntax 63");
+
+var shorthand64 = 1281 + 1;
+var computedKey64 = "computed_64";
+var setterSink64 = 0;
+var syntaxObj64 = {
+shorthand64,
+plain64: 1281,
+"string-64": 1281 + 2,
+1064: 1281 + 3,
+[computedKey64]: 1281 + 4,
+...makeSpread(1281),
+method64(delta) { return this.plain64 + delta; },
+get slot64() { return this.plain64 + 8; },
+set slot64(value) { setterSink64 = value; },
+};
+check(syntaxObj64.shorthand64 === 1281 + 1, "shorthand syntax 64");
+check(syntaxObj64.plain64 === 1281, "plain syntax 64");
+check(syntaxObj64["string-64"] === 1281 + 2, "string key syntax 64");
+check(syntaxObj64[1064] === 1281 + 3, "numeric key syntax 64");
+check(syntaxObj64[computedKey64] === 1281 + 4, "computed key syntax 64");
+check(syntaxObj64.spreadValue === 1281 + 6 && syntaxObj64.shared === 1281 + 7, "spread syntax 64");
+check(syntaxObj64.method64(9) === 1281 + 9, "method syntax 64");
+check(syntaxObj64.slot64 === 1281 + 8, "getter syntax 64");
+syntaxObj64.slot64 = 1281 + 10;
+check(setterSink64 === 1281 + 10, "setter syntax 64");
+
+var shorthand65 = 1301 + 1;
+var computedKey65 = "computed_65";
+var setterSink65 = 0;
+var syntaxObj65 = {
+shorthand65,
+plain65: 1301,
+"string-65": 1301 + 2,
+1065: 1301 + 3,
+[computedKey65]: 1301 + 4,
+...makeSpread(1301),
+method65(delta) { return this.plain65 + delta; },
+get slot65() { return this.plain65 + 8; },
+set slot65(value) { setterSink65 = value; },
+};
+check(syntaxObj65.shorthand65 === 1301 + 1, "shorthand syntax 65");
+check(syntaxObj65.plain65 === 1301, "plain syntax 65");
+check(syntaxObj65["string-65"] === 1301 + 2, "string key syntax 65");
+check(syntaxObj65[1065] === 1301 + 3, "numeric key syntax 65");
+check(syntaxObj65[computedKey65] === 1301 + 4, "computed key syntax 65");
+check(syntaxObj65.spreadValue === 1301 + 6 && syntaxObj65.shared === 1301 + 7, "spread syntax 65");
+check(syntaxObj65.method65(9) === 1301 + 9, "method syntax 65");
+check(syntaxObj65.slot65 === 1301 + 8, "getter syntax 65");
+syntaxObj65.slot65 = 1301 + 10;
+check(setterSink65 === 1301 + 10, "setter syntax 65");
+
+var shorthand66 = 1321 + 1;
+var computedKey66 = "computed_66";
+var setterSink66 = 0;
+var syntaxObj66 = {
+shorthand66,
+plain66: 1321,
+"string-66": 1321 + 2,
+1066: 1321 + 3,
+[computedKey66]: 1321 + 4,
+...makeSpread(1321),
+method66(delta) { return this.plain66 + delta; },
+get slot66() { return this.plain66 + 8; },
+set slot66(value) { setterSink66 = value; },
+};
+check(syntaxObj66.shorthand66 === 1321 + 1, "shorthand syntax 66");
+check(syntaxObj66.plain66 === 1321, "plain syntax 66");
+check(syntaxObj66["string-66"] === 1321 + 2, "string key syntax 66");
+check(syntaxObj66[1066] === 1321 + 3, "numeric key syntax 66");
+check(syntaxObj66[computedKey66] === 1321 + 4, "computed key syntax 66");
+check(syntaxObj66.spreadValue === 1321 + 6 && syntaxObj66.shared === 1321 + 7, "spread syntax 66");
+check(syntaxObj66.method66(9) === 1321 + 9, "method syntax 66");
+check(syntaxObj66.slot66 === 1321 + 8, "getter syntax 66");
+syntaxObj66.slot66 = 1321 + 10;
+check(setterSink66 === 1321 + 10, "setter syntax 66");
+
+var shorthand67 = 1341 + 1;
+var computedKey67 = "computed_67";
+var setterSink67 = 0;
+var syntaxObj67 = {
+shorthand67,
+plain67: 1341,
+"string-67": 1341 + 2,
+1067: 1341 + 3,
+[computedKey67]: 1341 + 4,
+...makeSpread(1341),
+method67(delta) { return this.plain67 + delta; },
+get slot67() { return this.plain67 + 8; },
+set slot67(value) { setterSink67 = value; },
+};
+check(syntaxObj67.shorthand67 === 1341 + 1, "shorthand syntax 67");
+check(syntaxObj67.plain67 === 1341, "plain syntax 67");
+check(syntaxObj67["string-67"] === 1341 + 2, "string key syntax 67");
+check(syntaxObj67[1067] === 1341 + 3, "numeric key syntax 67");
+check(syntaxObj67[computedKey67] === 1341 + 4, "computed key syntax 67");
+check(syntaxObj67.spreadValue === 1341 + 6 && syntaxObj67.shared === 1341 + 7, "spread syntax 67");
+check(syntaxObj67.method67(9) === 1341 + 9, "method syntax 67");
+check(syntaxObj67.slot67 === 1341 + 8, "getter syntax 67");
+syntaxObj67.slot67 = 1341 + 10;
+check(setterSink67 === 1341 + 10, "setter syntax 67");
+
+var shorthand68 = 1361 + 1;
+var computedKey68 = "computed_68";
+var setterSink68 = 0;
+var syntaxObj68 = {
+shorthand68,
+plain68: 1361,
+"string-68": 1361 + 2,
+1068: 1361 + 3,
+[computedKey68]: 1361 + 4,
+...makeSpread(1361),
+method68(delta) { return this.plain68 + delta; },
+get slot68() { return this.plain68 + 8; },
+set slot68(value) { setterSink68 = value; },
+};
+check(syntaxObj68.shorthand68 === 1361 + 1, "shorthand syntax 68");
+check(syntaxObj68.plain68 === 1361, "plain syntax 68");
+check(syntaxObj68["string-68"] === 1361 + 2, "string key syntax 68");
+check(syntaxObj68[1068] === 1361 + 3, "numeric key syntax 68");
+check(syntaxObj68[computedKey68] === 1361 + 4, "computed key syntax 68");
+check(syntaxObj68.spreadValue === 1361 + 6 && syntaxObj68.shared === 1361 + 7, "spread syntax 68");
+check(syntaxObj68.method68(9) === 1361 + 9, "method syntax 68");
+check(syntaxObj68.slot68 === 1361 + 8, "getter syntax 68");
+syntaxObj68.slot68 = 1361 + 10;
+check(setterSink68 === 1361 + 10, "setter syntax 68");
+
+var shorthand69 = 1381 + 1;
+var computedKey69 = "computed_69";
+var setterSink69 = 0;
+var syntaxObj69 = {
+shorthand69,
+plain69: 1381,
+"string-69": 1381 + 2,
+1069: 1381 + 3,
+[computedKey69]: 1381 + 4,
+...makeSpread(1381),
+method69(delta) { return this.plain69 + delta; },
+get slot69() { return this.plain69 + 8; },
+set slot69(value) { setterSink69 = value; },
+};
+check(syntaxObj69.shorthand69 === 1381 + 1, "shorthand syntax 69");
+check(syntaxObj69.plain69 === 1381, "plain syntax 69");
+check(syntaxObj69["string-69"] === 1381 + 2, "string key syntax 69");
+check(syntaxObj69[1069] === 1381 + 3, "numeric key syntax 69");
+check(syntaxObj69[computedKey69] === 1381 + 4, "computed key syntax 69");
+check(syntaxObj69.spreadValue === 1381 + 6 && syntaxObj69.shared === 1381 + 7, "spread syntax 69");
+check(syntaxObj69.method69(9) === 1381 + 9, "method syntax 69");
+check(syntaxObj69.slot69 === 1381 + 8, "getter syntax 69");
+syntaxObj69.slot69 = 1381 + 10;
+check(setterSink69 === 1381 + 10, "setter syntax 69");
+
+var shorthand70 = 1401 + 1;
+var computedKey70 = "computed_70";
+var setterSink70 = 0;
+var syntaxObj70 = {
+shorthand70,
+plain70: 1401,
+"string-70": 1401 + 2,
+1070: 1401 + 3,
+[computedKey70]: 1401 + 4,
+...makeSpread(1401),
+method70(delta) { return this.plain70 + delta; },
+get slot70() { return this.plain70 + 8; },
+set slot70(value) { setterSink70 = value; },
+};
+check(syntaxObj70.shorthand70 === 1401 + 1, "shorthand syntax 70");
+check(syntaxObj70.plain70 === 1401, "plain syntax 70");
+check(syntaxObj70["string-70"] === 1401 + 2, "string key syntax 70");
+check(syntaxObj70[1070] === 1401 + 3, "numeric key syntax 70");
+check(syntaxObj70[computedKey70] === 1401 + 4, "computed key syntax 70");
+check(syntaxObj70.spreadValue === 1401 + 6 && syntaxObj70.shared === 1401 + 7, "spread syntax 70");
+check(syntaxObj70.method70(9) === 1401 + 9, "method syntax 70");
+check(syntaxObj70.slot70 === 1401 + 8, "getter syntax 70");
+syntaxObj70.slot70 = 1401 + 10;
+check(setterSink70 === 1401 + 10, "setter syntax 70");
+
+var shorthand71 = 1421 + 1;
+var computedKey71 = "computed_71";
+var setterSink71 = 0;
+var syntaxObj71 = {
+shorthand71,
+plain71: 1421,
+"string-71": 1421 + 2,
+1071: 1421 + 3,
+[computedKey71]: 1421 + 4,
+...makeSpread(1421),
+method71(delta) { return this.plain71 + delta; },
+get slot71() { return this.plain71 + 8; },
+set slot71(value) { setterSink71 = value; },
+};
+check(syntaxObj71.shorthand71 === 1421 + 1, "shorthand syntax 71");
+check(syntaxObj71.plain71 === 1421, "plain syntax 71");
+check(syntaxObj71["string-71"] === 1421 + 2, "string key syntax 71");
+check(syntaxObj71[1071] === 1421 + 3, "numeric key syntax 71");
+check(syntaxObj71[computedKey71] === 1421 + 4, "computed key syntax 71");
+check(syntaxObj71.spreadValue === 1421 + 6 && syntaxObj71.shared === 1421 + 7, "spread syntax 71");
+check(syntaxObj71.method71(9) === 1421 + 9, "method syntax 71");
+check(syntaxObj71.slot71 === 1421 + 8, "getter syntax 71");
+syntaxObj71.slot71 = 1421 + 10;
+check(setterSink71 === 1421 + 10, "setter syntax 71");
+
+var shorthand72 = 1441 + 1;
+var computedKey72 = "computed_72";
+var setterSink72 = 0;
+var syntaxObj72 = {
+shorthand72,
+plain72: 1441,
+"string-72": 1441 + 2,
+1072: 1441 + 3,
+[computedKey72]: 1441 + 4,
+...makeSpread(1441),
+method72(delta) { return this.plain72 + delta; },
+get slot72() { return this.plain72 + 8; },
+set slot72(value) { setterSink72 = value; },
+};
+check(syntaxObj72.shorthand72 === 1441 + 1, "shorthand syntax 72");
+check(syntaxObj72.plain72 === 1441, "plain syntax 72");
+check(syntaxObj72["string-72"] === 1441 + 2, "string key syntax 72");
+check(syntaxObj72[1072] === 1441 + 3, "numeric key syntax 72");
+check(syntaxObj72[computedKey72] === 1441 + 4, "computed key syntax 72");
+check(syntaxObj72.spreadValue === 1441 + 6 && syntaxObj72.shared === 1441 + 7, "spread syntax 72");
+check(syntaxObj72.method72(9) === 1441 + 9, "method syntax 72");
+check(syntaxObj72.slot72 === 1441 + 8, "getter syntax 72");
+syntaxObj72.slot72 = 1441 + 10;
+check(setterSink72 === 1441 + 10, "setter syntax 72");
+
+var shorthand73 = 1461 + 1;
+var computedKey73 = "computed_73";
+var setterSink73 = 0;
+var syntaxObj73 = {
+shorthand73,
+plain73: 1461,
+"string-73": 1461 + 2,
+1073: 1461 + 3,
+[computedKey73]: 1461 + 4,
+...makeSpread(1461),
+method73(delta) { return this.plain73 + delta; },
+get slot73() { return this.plain73 + 8; },
+set slot73(value) { setterSink73 = value; },
+};
+check(syntaxObj73.shorthand73 === 1461 + 1, "shorthand syntax 73");
+check(syntaxObj73.plain73 === 1461, "plain syntax 73");
+check(syntaxObj73["string-73"] === 1461 + 2, "string key syntax 73");
+check(syntaxObj73[1073] === 1461 + 3, "numeric key syntax 73");
+check(syntaxObj73[computedKey73] === 1461 + 4, "computed key syntax 73");
+check(syntaxObj73.spreadValue === 1461 + 6 && syntaxObj73.shared === 1461 + 7, "spread syntax 73");
+check(syntaxObj73.method73(9) === 1461 + 9, "method syntax 73");
+check(syntaxObj73.slot73 === 1461 + 8, "getter syntax 73");
+syntaxObj73.slot73 = 1461 + 10;
+check(setterSink73 === 1461 + 10, "setter syntax 73");
+
+var shorthand74 = 1481 + 1;
+var computedKey74 = "computed_74";
+var setterSink74 = 0;
+var syntaxObj74 = {
+shorthand74,
+plain74: 1481,
+"string-74": 1481 + 2,
+1074: 1481 + 3,
+[computedKey74]: 1481 + 4,
+...makeSpread(1481),
+method74(delta) { return this.plain74 + delta; },
+get slot74() { return this.plain74 + 8; },
+set slot74(value) { setterSink74 = value; },
+};
+check(syntaxObj74.shorthand74 === 1481 + 1, "shorthand syntax 74");
+check(syntaxObj74.plain74 === 1481, "plain syntax 74");
+check(syntaxObj74["string-74"] === 1481 + 2, "string key syntax 74");
+check(syntaxObj74[1074] === 1481 + 3, "numeric key syntax 74");
+check(syntaxObj74[computedKey74] === 1481 + 4, "computed key syntax 74");
+check(syntaxObj74.spreadValue === 1481 + 6 && syntaxObj74.shared === 1481 + 7, "spread syntax 74");
+check(syntaxObj74.method74(9) === 1481 + 9, "method syntax 74");
+check(syntaxObj74.slot74 === 1481 + 8, "getter syntax 74");
+syntaxObj74.slot74 = 1481 + 10;
+check(setterSink74 === 1481 + 10, "setter syntax 74");
+
+var shorthand75 = 1501 + 1;
+var computedKey75 = "computed_75";
+var setterSink75 = 0;
+var syntaxObj75 = {
+shorthand75,
+plain75: 1501,
+"string-75": 1501 + 2,
+1075: 1501 + 3,
+[computedKey75]: 1501 + 4,
+...makeSpread(1501),
+method75(delta) { return this.plain75 + delta; },
+get slot75() { return this.plain75 + 8; },
+set slot75(value) { setterSink75 = value; },
+};
+check(syntaxObj75.shorthand75 === 1501 + 1, "shorthand syntax 75");
+check(syntaxObj75.plain75 === 1501, "plain syntax 75");
+check(syntaxObj75["string-75"] === 1501 + 2, "string key syntax 75");
+check(syntaxObj75[1075] === 1501 + 3, "numeric key syntax 75");
+check(syntaxObj75[computedKey75] === 1501 + 4, "computed key syntax 75");
+check(syntaxObj75.spreadValue === 1501 + 6 && syntaxObj75.shared === 1501 + 7, "spread syntax 75");
+check(syntaxObj75.method75(9) === 1501 + 9, "method syntax 75");
+check(syntaxObj75.slot75 === 1501 + 8, "getter syntax 75");
+syntaxObj75.slot75 = 1501 + 10;
+check(setterSink75 === 1501 + 10, "setter syntax 75");
+
+var shorthand76 = 1521 + 1;
+var computedKey76 = "computed_76";
+var setterSink76 = 0;
+var syntaxObj76 = {
+shorthand76,
+plain76: 1521,
+"string-76": 1521 + 2,
+1076: 1521 + 3,
+[computedKey76]: 1521 + 4,
+...makeSpread(1521),
+method76(delta) { return this.plain76 + delta; },
+get slot76() { return this.plain76 + 8; },
+set slot76(value) { setterSink76 = value; },
+};
+check(syntaxObj76.shorthand76 === 1521 + 1, "shorthand syntax 76");
+check(syntaxObj76.plain76 === 1521, "plain syntax 76");
+check(syntaxObj76["string-76"] === 1521 + 2, "string key syntax 76");
+check(syntaxObj76[1076] === 1521 + 3, "numeric key syntax 76");
+check(syntaxObj76[computedKey76] === 1521 + 4, "computed key syntax 76");
+check(syntaxObj76.spreadValue === 1521 + 6 && syntaxObj76.shared === 1521 + 7, "spread syntax 76");
+check(syntaxObj76.method76(9) === 1521 + 9, "method syntax 76");
+check(syntaxObj76.slot76 === 1521 + 8, "getter syntax 76");
+syntaxObj76.slot76 = 1521 + 10;
+check(setterSink76 === 1521 + 10, "setter syntax 76");
+
+var shorthand77 = 1541 + 1;
+var computedKey77 = "computed_77";
+var setterSink77 = 0;
+var syntaxObj77 = {
+shorthand77,
+plain77: 1541,
+"string-77": 1541 + 2,
+1077: 1541 + 3,
+[computedKey77]: 1541 + 4,
+...makeSpread(1541),
+method77(delta) { return this.plain77 + delta; },
+get slot77() { return this.plain77 + 8; },
+set slot77(value) { setterSink77 = value; },
+};
+check(syntaxObj77.shorthand77 === 1541 + 1, "shorthand syntax 77");
+check(syntaxObj77.plain77 === 1541, "plain syntax 77");
+check(syntaxObj77["string-77"] === 1541 + 2, "string key syntax 77");
+check(syntaxObj77[1077] === 1541 + 3, "numeric key syntax 77");
+check(syntaxObj77[computedKey77] === 1541 + 4, "computed key syntax 77");
+check(syntaxObj77.spreadValue === 1541 + 6 && syntaxObj77.shared === 1541 + 7, "spread syntax 77");
+check(syntaxObj77.method77(9) === 1541 + 9, "method syntax 77");
+check(syntaxObj77.slot77 === 1541 + 8, "getter syntax 77");
+syntaxObj77.slot77 = 1541 + 10;
+check(setterSink77 === 1541 + 10, "setter syntax 77");
+
+var shorthand78 = 1561 + 1;
+var computedKey78 = "computed_78";
+var setterSink78 = 0;
+var syntaxObj78 = {
+shorthand78,
+plain78: 1561,
+"string-78": 1561 + 2,
+1078: 1561 + 3,
+[computedKey78]: 1561 + 4,
+...makeSpread(1561),
+method78(delta) { return this.plain78 + delta; },
+get slot78() { return this.plain78 + 8; },
+set slot78(value) { setterSink78 = value; },
+};
+check(syntaxObj78.shorthand78 === 1561 + 1, "shorthand syntax 78");
+check(syntaxObj78.plain78 === 1561, "plain syntax 78");
+check(syntaxObj78["string-78"] === 1561 + 2, "string key syntax 78");
+check(syntaxObj78[1078] === 1561 + 3, "numeric key syntax 78");
+check(syntaxObj78[computedKey78] === 1561 + 4, "computed key syntax 78");
+check(syntaxObj78.spreadValue === 1561 + 6 && syntaxObj78.shared === 1561 + 7, "spread syntax 78");
+check(syntaxObj78.method78(9) === 1561 + 9, "method syntax 78");
+check(syntaxObj78.slot78 === 1561 + 8, "getter syntax 78");
+syntaxObj78.slot78 = 1561 + 10;
+check(setterSink78 === 1561 + 10, "setter syntax 78");
+
+var shorthand79 = 1581 + 1;
+var computedKey79 = "computed_79";
+var setterSink79 = 0;
+var syntaxObj79 = {
+shorthand79,
+plain79: 1581,
+"string-79": 1581 + 2,
+1079: 1581 + 3,
+[computedKey79]: 1581 + 4,
+...makeSpread(1581),
+method79(delta) { return this.plain79 + delta; },
+get slot79() { return this.plain79 + 8; },
+set slot79(value) { setterSink79 = value; },
+};
+check(syntaxObj79.shorthand79 === 1581 + 1, "shorthand syntax 79");
+check(syntaxObj79.plain79 === 1581, "plain syntax 79");
+check(syntaxObj79["string-79"] === 1581 + 2, "string key syntax 79");
+check(syntaxObj79[1079] === 1581 + 3, "numeric key syntax 79");
+check(syntaxObj79[computedKey79] === 1581 + 4, "computed key syntax 79");
+check(syntaxObj79.spreadValue === 1581 + 6 && syntaxObj79.shared === 1581 + 7, "spread syntax 79");
+check(syntaxObj79.method79(9) === 1581 + 9, "method syntax 79");
+check(syntaxObj79.slot79 === 1581 + 8, "getter syntax 79");
+syntaxObj79.slot79 = 1581 + 10;
+check(setterSink79 === 1581 + 10, "setter syntax 79");
+
+var shorthand80 = 1601 + 1;
+var computedKey80 = "computed_80";
+var setterSink80 = 0;
+var syntaxObj80 = {
+shorthand80,
+plain80: 1601,
+"string-80": 1601 + 2,
+1080: 1601 + 3,
+[computedKey80]: 1601 + 4,
+...makeSpread(1601),
+method80(delta) { return this.plain80 + delta; },
+get slot80() { return this.plain80 + 8; },
+set slot80(value) { setterSink80 = value; },
+};
+check(syntaxObj80.shorthand80 === 1601 + 1, "shorthand syntax 80");
+check(syntaxObj80.plain80 === 1601, "plain syntax 80");
+check(syntaxObj80["string-80"] === 1601 + 2, "string key syntax 80");
+check(syntaxObj80[1080] === 1601 + 3, "numeric key syntax 80");
+check(syntaxObj80[computedKey80] === 1601 + 4, "computed key syntax 80");
+check(syntaxObj80.spreadValue === 1601 + 6 && syntaxObj80.shared === 1601 + 7, "spread syntax 80");
+check(syntaxObj80.method80(9) === 1601 + 9, "method syntax 80");
+check(syntaxObj80.slot80 === 1601 + 8, "getter syntax 80");
+syntaxObj80.slot80 = 1601 + 10;
+check(setterSink80 === 1601 + 10, "setter syntax 80");
+
+var shorthand81 = 1621 + 1;
+var computedKey81 = "computed_81";
+var setterSink81 = 0;
+var syntaxObj81 = {
+shorthand81,
+plain81: 1621,
+"string-81": 1621 + 2,
+1081: 1621 + 3,
+[computedKey81]: 1621 + 4,
+...makeSpread(1621),
+method81(delta) { return this.plain81 + delta; },
+get slot81() { return this.plain81 + 8; },
+set slot81(value) { setterSink81 = value; },
+};
+check(syntaxObj81.shorthand81 === 1621 + 1, "shorthand syntax 81");
+check(syntaxObj81.plain81 === 1621, "plain syntax 81");
+check(syntaxObj81["string-81"] === 1621 + 2, "string key syntax 81");
+check(syntaxObj81[1081] === 1621 + 3, "numeric key syntax 81");
+check(syntaxObj81[computedKey81] === 1621 + 4, "computed key syntax 81");
+check(syntaxObj81.spreadValue === 1621 + 6 && syntaxObj81.shared === 1621 + 7, "spread syntax 81");
+check(syntaxObj81.method81(9) === 1621 + 9, "method syntax 81");
+check(syntaxObj81.slot81 === 1621 + 8, "getter syntax 81");
+syntaxObj81.slot81 = 1621 + 10;
+check(setterSink81 === 1621 + 10, "setter syntax 81");
+
+var shorthand82 = 1641 + 1;
+var computedKey82 = "computed_82";
+var setterSink82 = 0;
+var syntaxObj82 = {
+shorthand82,
+plain82: 1641,
+"string-82": 1641 + 2,
+1082: 1641 + 3,
+[computedKey82]: 1641 + 4,
+...makeSpread(1641),
+method82(delta) { return this.plain82 + delta; },
+get slot82() { return this.plain82 + 8; },
+set slot82(value) { setterSink82 = value; },
+};
+check(syntaxObj82.shorthand82 === 1641 + 1, "shorthand syntax 82");
+check(syntaxObj82.plain82 === 1641, "plain syntax 82");
+check(syntaxObj82["string-82"] === 1641 + 2, "string key syntax 82");
+check(syntaxObj82[1082] === 1641 + 3, "numeric key syntax 82");
+check(syntaxObj82[computedKey82] === 1641 + 4, "computed key syntax 82");
+check(syntaxObj82.spreadValue === 1641 + 6 && syntaxObj82.shared === 1641 + 7, "spread syntax 82");
+check(syntaxObj82.method82(9) === 1641 + 9, "method syntax 82");
+check(syntaxObj82.slot82 === 1641 + 8, "getter syntax 82");
+syntaxObj82.slot82 = 1641 + 10;
+check(setterSink82 === 1641 + 10, "setter syntax 82");
+
+var shorthand83 = 1661 + 1;
+var computedKey83 = "computed_83";
+var setterSink83 = 0;
+var syntaxObj83 = {
+shorthand83,
+plain83: 1661,
+"string-83": 1661 + 2,
+1083: 1661 + 3,
+[computedKey83]: 1661 + 4,
+...makeSpread(1661),
+method83(delta) { return this.plain83 + delta; },
+get slot83() { return this.plain83 + 8; },
+set slot83(value) { setterSink83 = value; },
+};
+check(syntaxObj83.shorthand83 === 1661 + 1, "shorthand syntax 83");
+check(syntaxObj83.plain83 === 1661, "plain syntax 83");
+check(syntaxObj83["string-83"] === 1661 + 2, "string key syntax 83");
+check(syntaxObj83[1083] === 1661 + 3, "numeric key syntax 83");
+check(syntaxObj83[computedKey83] === 1661 + 4, "computed key syntax 83");
+check(syntaxObj83.spreadValue === 1661 + 6 && syntaxObj83.shared === 1661 + 7, "spread syntax 83");
+check(syntaxObj83.method83(9) === 1661 + 9, "method syntax 83");
+check(syntaxObj83.slot83 === 1661 + 8, "getter syntax 83");
+syntaxObj83.slot83 = 1661 + 10;
+check(setterSink83 === 1661 + 10, "setter syntax 83");
+
+var shorthand84 = 1681 + 1;
+var computedKey84 = "computed_84";
+var setterSink84 = 0;
+var syntaxObj84 = {
+shorthand84,
+plain84: 1681,
+"string-84": 1681 + 2,
+1084: 1681 + 3,
+[computedKey84]: 1681 + 4,
+...makeSpread(1681),
+method84(delta) { return this.plain84 + delta; },
+get slot84() { return this.plain84 + 8; },
+set slot84(value) { setterSink84 = value; },
+};
+check(syntaxObj84.shorthand84 === 1681 + 1, "shorthand syntax 84");
+check(syntaxObj84.plain84 === 1681, "plain syntax 84");
+check(syntaxObj84["string-84"] === 1681 + 2, "string key syntax 84");
+check(syntaxObj84[1084] === 1681 + 3, "numeric key syntax 84");
+check(syntaxObj84[computedKey84] === 1681 + 4, "computed key syntax 84");
+check(syntaxObj84.spreadValue === 1681 + 6 && syntaxObj84.shared === 1681 + 7, "spread syntax 84");
+check(syntaxObj84.method84(9) === 1681 + 9, "method syntax 84");
+check(syntaxObj84.slot84 === 1681 + 8, "getter syntax 84");
+syntaxObj84.slot84 = 1681 + 10;
+check(setterSink84 === 1681 + 10, "setter syntax 84");
+
+var shorthand85 = 1701 + 1;
+var computedKey85 = "computed_85";
+var setterSink85 = 0;
+var syntaxObj85 = {
+shorthand85,
+plain85: 1701,
+"string-85": 1701 + 2,
+1085: 1701 + 3,
+[computedKey85]: 1701 + 4,
+...makeSpread(1701),
+method85(delta) { return this.plain85 + delta; },
+get slot85() { return this.plain85 + 8; },
+set slot85(value) { setterSink85 = value; },
+};
+check(syntaxObj85.shorthand85 === 1701 + 1, "shorthand syntax 85");
+check(syntaxObj85.plain85 === 1701, "plain syntax 85");
+check(syntaxObj85["string-85"] === 1701 + 2, "string key syntax 85");
+check(syntaxObj85[1085] === 1701 + 3, "numeric key syntax 85");
+check(syntaxObj85[computedKey85] === 1701 + 4, "computed key syntax 85");
+check(syntaxObj85.spreadValue === 1701 + 6 && syntaxObj85.shared === 1701 + 7, "spread syntax 85");
+check(syntaxObj85.method85(9) === 1701 + 9, "method syntax 85");
+check(syntaxObj85.slot85 === 1701 + 8, "getter syntax 85");
+syntaxObj85.slot85 = 1701 + 10;
+check(setterSink85 === 1701 + 10, "setter syntax 85");
+
+var shorthand86 = 1721 + 1;
+var computedKey86 = "computed_86";
+var setterSink86 = 0;
+var syntaxObj86 = {
+shorthand86,
+plain86: 1721,
+"string-86": 1721 + 2,
+1086: 1721 + 3,
+[computedKey86]: 1721 + 4,
+...makeSpread(1721),
+method86(delta) { return this.plain86 + delta; },
+get slot86() { return this.plain86 + 8; },
+set slot86(value) { setterSink86 = value; },
+};
+check(syntaxObj86.shorthand86 === 1721 + 1, "shorthand syntax 86");
+check(syntaxObj86.plain86 === 1721, "plain syntax 86");
+check(syntaxObj86["string-86"] === 1721 + 2, "string key syntax 86");
+check(syntaxObj86[1086] === 1721 + 3, "numeric key syntax 86");
+check(syntaxObj86[computedKey86] === 1721 + 4, "computed key syntax 86");
+check(syntaxObj86.spreadValue === 1721 + 6 && syntaxObj86.shared === 1721 + 7, "spread syntax 86");
+check(syntaxObj86.method86(9) === 1721 + 9, "method syntax 86");
+check(syntaxObj86.slot86 === 1721 + 8, "getter syntax 86");
+syntaxObj86.slot86 = 1721 + 10;
+check(setterSink86 === 1721 + 10, "setter syntax 86");
+
+var shorthand87 = 1741 + 1;
+var computedKey87 = "computed_87";
+var setterSink87 = 0;
+var syntaxObj87 = {
+shorthand87,
+plain87: 1741,
+"string-87": 1741 + 2,
+1087: 1741 + 3,
+[computedKey87]: 1741 + 4,
+...makeSpread(1741),
+method87(delta) { return this.plain87 + delta; },
+get slot87() { return this.plain87 + 8; },
+set slot87(value) { setterSink87 = value; },
+};
+check(syntaxObj87.shorthand87 === 1741 + 1, "shorthand syntax 87");
+check(syntaxObj87.plain87 === 1741, "plain syntax 87");
+check(syntaxObj87["string-87"] === 1741 + 2, "string key syntax 87");
+check(syntaxObj87[1087] === 1741 + 3, "numeric key syntax 87");
+check(syntaxObj87[computedKey87] === 1741 + 4, "computed key syntax 87");
+check(syntaxObj87.spreadValue === 1741 + 6 && syntaxObj87.shared === 1741 + 7, "spread syntax 87");
+check(syntaxObj87.method87(9) === 1741 + 9, "method syntax 87");
+check(syntaxObj87.slot87 === 1741 + 8, "getter syntax 87");
+syntaxObj87.slot87 = 1741 + 10;
+check(setterSink87 === 1741 + 10, "setter syntax 87");
+
+var shorthand88 = 1761 + 1;
+var computedKey88 = "computed_88";
+var setterSink88 = 0;
+var syntaxObj88 = {
+shorthand88,
+plain88: 1761,
+"string-88": 1761 + 2,
+1088: 1761 + 3,
+[computedKey88]: 1761 + 4,
+...makeSpread(1761),
+method88(delta) { return this.plain88 + delta; },
+get slot88() { return this.plain88 + 8; },
+set slot88(value) { setterSink88 = value; },
+};
+check(syntaxObj88.shorthand88 === 1761 + 1, "shorthand syntax 88");
+check(syntaxObj88.plain88 === 1761, "plain syntax 88");
+check(syntaxObj88["string-88"] === 1761 + 2, "string key syntax 88");
+check(syntaxObj88[1088] === 1761 + 3, "numeric key syntax 88");
+check(syntaxObj88[computedKey88] === 1761 + 4, "computed key syntax 88");
+check(syntaxObj88.spreadValue === 1761 + 6 && syntaxObj88.shared === 1761 + 7, "spread syntax 88");
+check(syntaxObj88.method88(9) === 1761 + 9, "method syntax 88");
+check(syntaxObj88.slot88 === 1761 + 8, "getter syntax 88");
+syntaxObj88.slot88 = 1761 + 10;
+check(setterSink88 === 1761 + 10, "setter syntax 88");
+
+var shorthand89 = 1781 + 1;
+var computedKey89 = "computed_89";
+var setterSink89 = 0;
+var syntaxObj89 = {
+shorthand89,
+plain89: 1781,
+"string-89": 1781 + 2,
+1089: 1781 + 3,
+[computedKey89]: 1781 + 4,
+...makeSpread(1781),
+method89(delta) { return this.plain89 + delta; },
+get slot89() { return this.plain89 + 8; },
+set slot89(value) { setterSink89 = value; },
+};
+check(syntaxObj89.shorthand89 === 1781 + 1, "shorthand syntax 89");
+check(syntaxObj89.plain89 === 1781, "plain syntax 89");
+check(syntaxObj89["string-89"] === 1781 + 2, "string key syntax 89");
+check(syntaxObj89[1089] === 1781 + 3, "numeric key syntax 89");
+check(syntaxObj89[computedKey89] === 1781 + 4, "computed key syntax 89");
+check(syntaxObj89.spreadValue === 1781 + 6 && syntaxObj89.shared === 1781 + 7, "spread syntax 89");
+check(syntaxObj89.method89(9) === 1781 + 9, "method syntax 89");
+check(syntaxObj89.slot89 === 1781 + 8, "getter syntax 89");
+syntaxObj89.slot89 = 1781 + 10;
+check(setterSink89 === 1781 + 10, "setter syntax 89");
+
+check(score > 0, "object literal syntax score");

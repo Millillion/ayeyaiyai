@@ -1,0 +1,11 @@
+subclause: "13.2.1"
+title: The this Keyword
+url: https://262.ecma-international.org/16.0/#sec-this-keyword
+behaviors:
+  - this-resolves-current-this-binding
+
+behavior_descriptions:
+  this-resolves-current-this-binding: |
+    The this primary expression evaluates by resolving the current this
+    binding in script, strict function, module, method, constructor, accessor,
+    call/apply/bind, and lexical arrow contexts.

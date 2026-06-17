@@ -76,7 +76,6 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(&next_expression)?;
         self.push_local_set(next_local);
         self.emit_store_identifier_value_local(name, &next_expression, next_local)?;
-        self.note_identifier_numeric_kind(name);
         if prefix {
             self.emit_numeric_expression(&next_expression)?;
         } else {
@@ -108,7 +107,6 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(&next_expression)?;
         self.push_local_set(next_local);
         self.emit_store_identifier_value_local(name, &next_expression, next_local)?;
-        self.note_identifier_numeric_kind(name);
         if prefix {
             self.emit_numeric_expression(&next_expression)?;
         } else {
@@ -143,7 +141,6 @@ impl<'a> FunctionCompiler<'a> {
         self.emit_numeric_expression(&next_expression)?;
         self.push_local_set(next_local);
         self.emit_store_identifier_value_local(name, &next_expression, next_local)?;
-        self.note_identifier_numeric_kind(name);
         if prefix {
             self.emit_numeric_expression(&next_expression)?;
         } else {

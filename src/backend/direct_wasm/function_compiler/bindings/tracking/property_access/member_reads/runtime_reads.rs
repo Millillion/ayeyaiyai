@@ -1218,6 +1218,18 @@ impl<'a> FunctionCompiler<'a> {
             }
             return Ok(true);
         }
+        if !object_is_runtime_array_element_base
+            && self.emit_static_object_binding_data_member_read(object, property)?
+        {
+            if crate::ayy_env_flag!("AYY_TRACE_RUNTIME_SHADOWS")
+                || crate::ayy_env_flag!("AYY_TRACE_MEMBER_READS")
+            {
+                eprintln!(
+                    "runtime_shadow_member_branch static_data object={object:?} property={property:?}"
+                );
+            }
+            return Ok(true);
+        }
         let dynamic_descriptor_member_read = matches!(
             (object, property),
             (Expression::Identifier(name), Expression::String(property_name))

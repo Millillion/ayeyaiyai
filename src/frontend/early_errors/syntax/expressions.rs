@@ -5,14 +5,14 @@ use super::{
     },
     declarations::{
         BindingRestrictions, is_await_like_identifier, is_yield_like_identifier,
-        validate_escaped_identifier_text, validate_pattern_syntax,
-        validate_pattern_syntax_with_restrictions,
+        validate_escaped_identifier_text, validate_pattern_syntax_with_restrictions,
     },
     functions::{
-        ensure_parameter_names_are_valid, validate_class_syntax, validate_function_syntax,
-        validate_property_name_syntax,
+        ensure_parameter_names_are_valid, validate_class_syntax_with_restrictions,
+        validate_function_syntax_with_restrictions,
+        validate_property_name_syntax_with_restrictions,
     },
-    statements::{validate_statement_syntax, validate_statement_syntax_with_restrictions},
+    statements::validate_statement_syntax_with_restrictions,
 };
 use std::collections::BTreeSet;
 use swc_common::Spanned;
@@ -904,8 +904,9 @@ fn validate_identifier_reference_syntax(
         identifier.sym
     );
     ensure!(
-        !(restrictions.await_reserved && is_await_like_identifier(identifier.sym.as_ref())),
-        "`await` cannot be used as an identifier in an async function"
+        !(restrictions.reserves_await_identifier()
+            && is_await_like_identifier(identifier.sym.as_ref())),
+        "`await` cannot be used as an identifier in this context"
     );
     ensure!(
         !(restrictions.yield_reserved && is_yield_like_identifier(identifier.sym.as_ref())),
@@ -936,7 +937,11 @@ fn validate_assignment_pattern_syntax(
             for property in &object.props {
                 match property {
                     ObjectPatProp::KeyValue(property) => {
-                        validate_property_name_syntax(&property.key, file)?;
+                        validate_property_name_syntax_with_restrictions(
+                            &property.key,
+                            file,
+                            restrictions,
+                        )?;
                         validate_assignment_pattern_syntax(&property.value, file, restrictions)?;
                     }
                     ObjectPatProp::Assign(property) => {
@@ -1148,7 +1153,7 @@ fn validate_assignment_target_syntax(
     Ok(())
 }
 
-pub(super) fn validate_expression_syntax_with_restrictions(
+pub(crate) fn validate_expression_syntax_with_restrictions(
     expression: &Expr,
     file: &swc_common::SourceFile,
     restrictions: BindingRestrictions,
@@ -1220,7 +1225,11 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                             validate_identifier_reference_syntax(identifier, file, restrictions)?;
                         }
                         Prop::KeyValue(property) => {
-                            validate_property_name_syntax(&property.key, file)?;
+                            validate_property_name_syntax_with_restrictions(
+                                &property.key,
+                                file,
+                                restrictions,
+                            )?;
                             validate_expression_syntax_with_restrictions(
                                 &property.value,
                                 file,
@@ -1229,26 +1238,50 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                         }
                         Prop::Getter(property) => {
                             validate_object_getter_contextual_keyword(property, file)?;
-                            validate_property_name_syntax(&property.key, file)?;
+                            validate_property_name_syntax_with_restrictions(
+                                &property.key,
+                                file,
+                                restrictions,
+                            )?;
                             if let Some(body) = &property.body {
                                 for statement in &body.stmts {
-                                    validate_statement_syntax(statement, file)?;
+                                    validate_statement_syntax_with_restrictions(
+                                        statement,
+                                        file,
+                                        restrictions,
+                                    )?;
                                 }
                             }
                         }
                         Prop::Setter(property) => {
                             validate_object_setter_contextual_keyword(property, file)?;
-                            validate_property_name_syntax(&property.key, file)?;
-                            validate_pattern_syntax(&property.param, file)?;
+                            validate_property_name_syntax_with_restrictions(
+                                &property.key,
+                                file,
+                                restrictions,
+                            )?;
+                            validate_pattern_syntax_with_restrictions(
+                                &property.param,
+                                file,
+                                restrictions,
+                            )?;
                             if let Some(body) = &property.body {
                                 for statement in &body.stmts {
-                                    validate_statement_syntax(statement, file)?;
+                                    validate_statement_syntax_with_restrictions(
+                                        statement,
+                                        file,
+                                        restrictions,
+                                    )?;
                                 }
                             }
                         }
                         Prop::Method(property) => {
                             validate_async_object_method_no_line_terminator(property, file)?;
-                            validate_property_name_syntax(&property.key, file)?;
+                            validate_property_name_syntax_with_restrictions(
+                                &property.key,
+                                file,
+                                restrictions,
+                            )?;
                             ensure_parameter_names_are_valid(
                                 property
                                     .function
@@ -1262,7 +1295,11 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                                     .all(|parameter| matches!(parameter.pat, Pat::Ident(_))),
                                 true,
                             )?;
-                            validate_function_syntax(&property.function, file)?;
+                            validate_function_syntax_with_restrictions(
+                                &property.function,
+                                file,
+                                restrictions,
+                            )?;
                         }
                         Prop::Assign(property) => {
                             validate_identifier_reference_syntax(
@@ -1313,9 +1350,9 @@ pub(super) fn validate_expression_syntax_with_restrictions(
         Expr::Fn(function) => {
             if let Some(identifier) = &function.ident {
                 ensure!(
-                    !(function.function.is_async
+                    !((restrictions.module_await_reserved || function.function.is_async)
                         && is_await_like_identifier(identifier.sym.as_ref())),
-                    "`await` cannot be used as a binding identifier in an async function"
+                    "`await` cannot be used as a binding identifier in this context"
                 );
                 ensure!(
                     !(function.function.is_generator
@@ -1323,7 +1360,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                     "`yield` cannot be used as a binding identifier in a generator function"
                 );
             }
-            validate_function_syntax(&function.function, file)?
+            validate_function_syntax_with_restrictions(&function.function, file, restrictions)?
         }
         Expr::Arrow(arrow) => {
             // A non-async arrow body is parsed with [~Await]
@@ -1334,11 +1371,13 @@ pub(super) fn validate_expression_syntax_with_restrictions(
             // from the enclosing context.
             let body_restrictions = BindingRestrictions {
                 await_reserved: arrow.is_async,
+                module_await_reserved: restrictions.module_await_reserved,
                 yield_reserved: false,
                 await_expression_forbidden: false,
             };
             let parameter_restrictions = BindingRestrictions {
                 await_reserved: restrictions.await_reserved || arrow.is_async,
+                module_await_reserved: restrictions.module_await_reserved,
                 yield_reserved: body_restrictions.yield_reserved,
                 await_expression_forbidden: restrictions.await_expression_forbidden
                     || restrictions.await_reserved
@@ -1379,9 +1418,9 @@ pub(super) fn validate_expression_syntax_with_restrictions(
         Expr::Class(class) => {
             if let Some(identifier) = &class.ident {
                 ensure!(
-                    !(restrictions.await_reserved
+                    !(restrictions.reserves_await_identifier()
                         && is_await_like_identifier(identifier.sym.as_ref())),
-                    "`await` cannot be used as a binding identifier in an async function"
+                    "`await` cannot be used as a binding identifier in this context"
                 );
                 ensure!(
                     !(restrictions.yield_reserved
@@ -1389,7 +1428,7 @@ pub(super) fn validate_expression_syntax_with_restrictions(
                     "`yield` cannot be used as a binding identifier in a generator function"
                 );
             }
-            validate_class_syntax(&class.class, file)?
+            validate_class_syntax_with_restrictions(&class.class, file, restrictions)?
         }
         Expr::Tpl(template) => {
             for expression in &template.exprs {

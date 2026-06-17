@@ -1,0 +1,17 @@
+subclause: "13.3.2"
+title: Property Accessors
+url: https://262.ecma-international.org/16.0/#sec-property-accessors
+behaviors:
+  - dot-access-uses-identifier-stringvalue
+  - bracket-access-evaluates-base-then-expression-key
+
+behavior_descriptions:
+  dot-access-uses-identifier-stringvalue: |
+    Dot property access uses the StringValue of IdentifierName as the
+    referenced property key, so identifier-name spellings after dot select
+    the matching string-named property for reads, writes, and calls.
+
+  bracket-access-evaluates-base-then-expression-key: |
+    Bracket property access evaluates the base expression first, then
+    evaluates the expression key, gets both values, and uses the computed
+    reference for reads and writes.

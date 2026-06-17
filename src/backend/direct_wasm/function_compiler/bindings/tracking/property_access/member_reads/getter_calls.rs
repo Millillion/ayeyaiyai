@@ -121,6 +121,12 @@ impl<'a> FunctionCompiler<'a> {
                             self.current_function_name(),
                         )
                     {
+                        if let Some(number) =
+                            self.resolve_fast_static_number_expression(&return_value, 0)
+                        {
+                            self.emit_numeric_expression(&Expression::Number(number))?;
+                            return Ok(true);
+                        }
                         let return_value = if self
                             .resolve_static_boxed_primitive_value(&return_value)
                             .is_some()

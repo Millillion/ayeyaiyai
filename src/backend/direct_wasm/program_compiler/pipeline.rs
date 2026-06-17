@@ -162,10 +162,21 @@ impl DirectWasmCompiler {
         let mut start_statements = program
             .functions
             .iter()
-            .filter(|function| function.register_global)
-            .map(|function| Statement::Assign {
-                name: function.name.clone(),
-                value: Expression::Identifier(function.name.clone()),
+            .filter_map(|function| {
+                if function.register_global {
+                    return Some(Statement::Assign {
+                        name: function.name.clone(),
+                        value: Expression::Identifier(function.name.clone()),
+                    });
+                }
+                function
+                    .top_level_binding
+                    .as_ref()
+                    .map(|name| Statement::Let {
+                        name: name.clone(),
+                        mutable: true,
+                        value: Expression::Identifier(function.name.clone()),
+                    })
             })
             .collect::<Vec<_>>();
         start_statements.extend_from_slice(&program.statements);

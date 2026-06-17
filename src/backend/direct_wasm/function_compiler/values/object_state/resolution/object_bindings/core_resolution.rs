@@ -180,7 +180,11 @@ impl<'a> FunctionCompiler<'a> {
         }
         let cacheable = matches!(
             expression,
-            Expression::Call { .. } | Expression::New { .. } | Expression::Member { .. }
+            Expression::Identifier(_)
+                | Expression::This
+                | Expression::Call { .. }
+                | Expression::New { .. }
+                | Expression::Member { .. }
         ) && memo::memo_context_is_cacheable();
         let key = if cacheable {
             memo::object_binding_cache_key(expression, self.current_function_name())

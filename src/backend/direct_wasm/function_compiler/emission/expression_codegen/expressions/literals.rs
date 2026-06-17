@@ -1,3 +1,5 @@
+use crate::ir::hir::expression_is_array_elision;
+
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
@@ -308,6 +310,47 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn emit_static_array_spread_source_effects(
+        &mut self,
+        expression: &Expression,
+    ) -> DirectResult<()> {
+        match expression {
+            Expression::Array(elements) => {
+                for element in elements {
+                    match element {
+                        crate::ir::hir::ArrayElement::Expression(value) => {
+                            if expression_is_array_elision(value) {
+                                continue;
+                            }
+                            self.emit_numeric_expression(value)?;
+                            self.state.emission.output.instructions.push(0x1a);
+                        }
+                        crate::ir::hir::ArrayElement::Spread(value) => {
+                            if self.resolve_array_binding_from_expression(value).is_some()
+                                || self
+                                    .resolve_static_iterable_binding_from_expression(value)
+                                    .is_some()
+                            {
+                                self.emit_static_array_spread_source_effects(value)?;
+                            } else {
+                                self.emit_numeric_expression(&Expression::GetIterator(Box::new(
+                                    value.clone(),
+                                )))?;
+                                self.state.emission.output.instructions.push(0x1a);
+                            }
+                        }
+                    }
+                }
+            }
+            _ if inline_summary_side_effect_free_expression(expression) => {}
+            _ => {
+                self.emit_numeric_expression(expression)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+        }
+        Ok(())
+    }
+
     fn emit_array_literal_expression(
         &mut self,
         elements: &[crate::ir::hir::ArrayElement],
@@ -315,11 +358,25 @@ impl<'a> FunctionCompiler<'a> {
         for element in elements {
             match element {
                 crate::ir::hir::ArrayElement::Expression(expression) => {
+                    if expression_is_array_elision(expression) {
+                        continue;
+                    }
                     self.emit_numeric_expression(expression)?;
                     self.state.emission.output.instructions.push(0x1a);
                 }
                 crate::ir::hir::ArrayElement::Spread(expression) => {
-                    if !self.emit_array_spread_expression(expression)?
+                    if self
+                        .static_array_literal_spread_binding(expression)
+                        .is_some()
+                        || self
+                            .resolve_array_binding_from_expression(expression)
+                            .is_some()
+                        || self
+                            .resolve_static_iterable_binding_from_expression(expression)
+                            .is_some()
+                    {
+                        self.emit_static_array_spread_source_effects(expression)?;
+                    } else if !self.emit_array_spread_expression(expression)?
                         && !self.emit_static_array_spread_iterator_throw(expression)?
                     {
                         self.emit_numeric_expression(&Expression::GetIterator(Box::new(

@@ -243,29 +243,17 @@ impl<'a> FunctionCompiler<'a> {
                 return Some(number);
             }
             if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
+                && let Expression::String(text) = self.materialize_static_expression(object)
+            {
+                return Some(text.encode_utf16().count() as f64);
+            }
+            if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
                 && let Some(array_binding) = self.resolve_array_binding_from_expression(object)
             {
                 let has_runtime_array_state = self.expression_uses_runtime_array_state(object);
                 if !has_runtime_array_state {
                     return Some(array_binding.values.len() as f64);
                 }
-            }
-            if matches!(property.as_ref(), Expression::String(property_name) if property_name == "length")
-                && self
-                    .resolve_function_binding_from_expression(object)
-                    .is_none()
-                && self
-                    .resolve_member_getter_binding(object, property)
-                    .is_none()
-                && self
-                    .resolve_member_function_binding(object, property)
-                    .is_none()
-                && self
-                    .resolve_member_setter_binding(object, property)
-                    .is_none()
-                && let Expression::String(text) = self.materialize_static_expression(object)
-            {
-                return Some(text.encode_utf16().count() as f64);
             }
         }
         let materialized = self.materialize_static_expression(expression);

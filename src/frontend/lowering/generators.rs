@@ -1,3 +1,5 @@
+use crate::ir::hir::array_elision_expression;
+
 use super::*;
 
 impl Lowerer {
@@ -804,7 +806,7 @@ impl Lowerer {
                 let mut elements = Vec::with_capacity(array.elems.len());
                 for element in &array.elems {
                     let Some(element) = element else {
-                        elements.push(ArrayElement::Expression(Expression::Undefined));
+                        elements.push(ArrayElement::Expression(array_elision_expression()));
                         continue;
                     };
                     let expression = if let Some((mut nested, expression)) =

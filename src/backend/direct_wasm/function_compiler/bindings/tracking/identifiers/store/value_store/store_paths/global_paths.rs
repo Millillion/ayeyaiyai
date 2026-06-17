@@ -372,7 +372,7 @@ fn state_stores_unresolved_constructor_instance(state: &PreparedIdentifierStoreS
 }
 
 impl<'a> FunctionCompiler<'a> {
-    fn clear_local_static_metadata_for_global_store(&mut self, name: &str) {
+    pub(super) fn clear_local_static_metadata_for_global_store(&mut self, name: &str) {
         self.state.clear_local_static_binding_metadata(name);
     }
 
@@ -839,6 +839,11 @@ impl<'a> FunctionCompiler<'a> {
                 self.resolve_constructor_capture_source_bindings_from_expression(source)
             })
             .or_else(|| {
+                self.resolve_constructor_capture_source_bindings_from_expression(
+                    &state.canonical_value_expression,
+                )
+            })
+            .or_else(|| {
                 self.resolve_class_init_function_store_capture_sources(function_name, state, true)
             });
         let mut capture_slots = BTreeMap::new();
@@ -1297,16 +1302,58 @@ impl<'a> FunctionCompiler<'a> {
         ensure_descriptor: bool,
     ) -> DirectResult<()> {
         let trace_identifier_store = crate::ayy_env_flag!("AYY_TRACE_IDENTIFIER_STORE");
-        let trace_step = |label: &str| {
+        let trace_global_metadata_timing = crate::ayy_env_flag!("AYY_TRACE_GLOBAL_METADATA_TIMING");
+        let timing_start = trace_global_metadata_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |label: &str| {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:global_metadata:{label}");
             }
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "global_metadata_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
         };
         trace_step("start");
+        if self.current_function_assigns_nonlocal_binding(name) {
+            let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
+            self.clear_global_binding_state(name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_binding_state(name);
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            trace_step("current_function_nonlocal");
+            trace_step("done");
+            return Ok(());
+        }
         if self.identifier_store_state_depends_on_active_loop_assignment(state) {
             self.clear_global_binding_state(name);
             self.preserve_active_loop_safe_global_metadata(name, state)?;
             trace_step("active_loop");
+            return Ok(());
+        }
+        if state.opaque_runtime_value {
+            let kind = state.kind.unwrap_or(StaticValueKind::Unknown);
+            self.clear_global_binding_state(name);
+            self.backend
+                .shared_global_semantics
+                .clear_global_binding_state(name);
+            self.backend.set_global_binding_kind(name, kind);
+            self.backend
+                .shared_global_semantics
+                .set_global_binding_kind(name, kind);
+            trace_step("opaque_runtime");
+            trace_step("done");
             return Ok(());
         }
         if state_stores_identifier_iterator_method_result(state)
@@ -1375,7 +1422,9 @@ impl<'a> FunctionCompiler<'a> {
         let object_binding = if stores_bind_call || stores_unresolved_constructor_instance {
             None
         } else {
-            self.resolve_object_binding_from_expression(&state.object_binding_expression)
+            state.object_binding.clone().or_else(|| {
+                self.resolve_object_binding_from_expression(&state.object_binding_expression)
+            })
         };
         trace_step("object_binding:done");
         let metadata_assignment_expression = if (name.starts_with("__ayy_target_object_")
@@ -1673,45 +1722,69 @@ impl<'a> FunctionCompiler<'a> {
         name: &str,
         state: &PreparedIdentifierStoreState,
     ) {
-        if self.identifier_store_preserves_global_reference_identity(name, state) {
-            return;
-        }
-
+        let trace_detach_timing = crate::ayy_env_flag!("AYY_TRACE_DETACH_ALIAS_TIMING");
+        let timing_start = trace_detach_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "detach_alias_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         let source_value = self.global_value_binding(name).cloned();
+        trace_step("source_value");
         let mut array_binding = self.global_array_binding(name).cloned();
+        trace_step("array_binding");
         let mut object_binding = self.global_object_binding(name).cloned();
+        trace_step("object_binding");
         if let Some(source_expression) = source_value.as_ref() {
             if array_binding.is_none() {
                 array_binding = self.resolve_array_binding_from_expression(source_expression);
             }
+            trace_step("source_array_binding");
             if object_binding.is_none() {
                 object_binding = self.resolve_object_binding_from_expression(source_expression);
             }
+            trace_step("source_object_binding");
         }
         if array_binding.is_none() && object_binding.is_none() {
+            trace_step("no_aliasable_binding");
             return;
         }
 
-        let mut alias_names: Vec<String> = self
+        let mut alias_names = self
             .backend
             .global_semantics
             .values
-            .value_bindings
-            .iter()
-            .filter_map(|(alias_name, value)| {
-                (alias_name != name
-                    && matches!(value, Expression::Identifier(source_name) if source_name == name))
-                .then(|| alias_name.clone())
-            })
-            .collect();
-        for (alias_name, value) in &self.backend.shared_global_semantics.values.value_bindings {
-            if alias_name != name
-                && matches!(value, Expression::Identifier(source_name) if source_name == name)
-                && !alias_names.iter().any(|existing| existing == alias_name)
-            {
+            .identifier_alias_binding_names(name);
+        trace_step("global_alias_names");
+        for alias_name in self
+            .backend
+            .shared_global_semantics
+            .values
+            .identifier_alias_binding_names(name)
+        {
+            if !alias_names.iter().any(|existing| existing == &alias_name) {
                 alias_names.push(alias_name.clone());
             }
         }
+        trace_step("shared_alias_names");
+        if alias_names.is_empty() {
+            trace_step("no_aliases");
+            return;
+        }
+        if self.identifier_store_preserves_global_reference_identity(name, state) {
+            trace_step("preserves_reference_identity");
+            return;
+        }
+        trace_step("reference_identity");
 
         for alias_name in alias_names {
             self.backend
@@ -1759,6 +1832,7 @@ impl<'a> FunctionCompiler<'a> {
                     .sync_object_binding(&alias_name, Some(object_binding));
             }
         }
+        trace_step("detach_aliases");
     }
 
     fn preserve_active_loop_safe_global_metadata(
@@ -1945,7 +2019,25 @@ impl<'a> FunctionCompiler<'a> {
         global_index: u32,
         state: &PreparedIdentifierStoreState,
     ) -> DirectResult<()> {
+        let trace_declared_global_store_timing =
+            crate::ayy_env_flag!("AYY_TRACE_DECLARED_GLOBAL_STORE_TIMING");
+        let timing_start = trace_declared_global_store_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |label: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "declared_global_store_timing name={name} step={label} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         self.clear_local_static_metadata_for_global_store(name);
+        trace_step("clear_local_static");
         if (state.is_internal_iterator_temp || state_stores_internal_iterator_step_value(state))
             && (name.starts_with("__ayy_") || self.backend.lexical_global_binding(name).is_none())
         {
@@ -1973,9 +2065,11 @@ impl<'a> FunctionCompiler<'a> {
             }
             self.push_local_get(value_local);
             self.push_global_set(global_index);
+            trace_step("internal_iterator_store");
             return Ok(());
         }
         if let Some(binding) = self.backend.lexical_global_binding(name) {
+            trace_step("lexical_binding");
             if binding.mutable {
                 let static_self_store = matches!(
                     &state.canonical_value_expression,
@@ -2008,6 +2102,7 @@ impl<'a> FunctionCompiler<'a> {
                             array_binding,
                         )?;
                     }
+                    trace_step("lexical_static_self_store");
                     return Ok(());
                 }
                 let had_static_initialization_metadata = self.global_value_binding(name).is_some()
@@ -2022,6 +2117,7 @@ impl<'a> FunctionCompiler<'a> {
                 if had_static_initialization_metadata || has_new_static_metadata {
                     self.preserve_identifier_store_global_metadata(name, state, false)?;
                 }
+                trace_step("lexical_metadata");
             }
             self.emit_store_declared_lexical_global_from_local(
                 name,
@@ -2030,6 +2126,7 @@ impl<'a> FunctionCompiler<'a> {
                 value_local,
             )?;
             self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
+            trace_step("lexical_runtime_shadows");
             if self.emit_force_global_runtime_array_state_from_internal_rest_source(
                 name,
                 &state.tracked_value_expression,
@@ -2043,6 +2140,7 @@ impl<'a> FunctionCompiler<'a> {
             } else if let Some(array_binding) = state.array_binding.as_ref() {
                 self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
             }
+            trace_step("lexical_array_sync");
             return Ok(());
         }
 
@@ -2053,11 +2151,15 @@ impl<'a> FunctionCompiler<'a> {
             .isolated_indirect_eval
         {
             self.detach_global_reference_aliases_before_rebind(name, state);
+            trace_step("detach_aliases");
             self.preserve_identifier_store_global_metadata(name, state, false)?;
+            trace_step("global_metadata");
         }
         self.push_local_get(value_local);
         self.push_global_set(global_index);
+        trace_step("emit_global_set");
         self.sync_identifier_store_runtime_object_shadows(name, name, state)?;
+        trace_step("runtime_shadows");
         if self.emit_force_global_runtime_array_state_from_internal_rest_source(
             name,
             &state.tracked_value_expression,
@@ -2071,6 +2173,7 @@ impl<'a> FunctionCompiler<'a> {
         } else if let Some(array_binding) = state.array_binding.as_ref() {
             self.emit_sync_global_runtime_array_state_from_binding(name, array_binding)?;
         }
+        trace_step("array_sync");
         Ok(())
     }
 

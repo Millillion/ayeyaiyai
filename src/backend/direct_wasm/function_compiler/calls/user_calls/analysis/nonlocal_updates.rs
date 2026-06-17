@@ -5,7 +5,36 @@ mod statement_traversal;
 
 use statement_traversal::collect_updated_names_from_statement;
 
+fn user_function_declares_source_binding(user_function: &UserFunction, source_name: &str) -> bool {
+    user_function.scope_bindings.contains(source_name)
+        || user_function.params.iter().any(|param| {
+            let param_source_name = scoped_binding_source_name(param).unwrap_or(param);
+            param == source_name || param_source_name == source_name
+        })
+}
+
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn prepared_user_function_assigned_nonlocal_bindings(
+        &self,
+        user_function: &UserFunction,
+    ) -> HashSet<String> {
+        self.assigned_nonlocal_bindings(&user_function.name)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    pub(in crate::backend::direct_wasm) fn conservative_static_call_effect_invalidation_names(
+        &self,
+    ) -> HashSet<String> {
+        let mut names = HashSet::new();
+
+        for assigned in self.assigned_nonlocal_bindings.values() {
+            names.extend(assigned.iter().cloned());
+        }
+
+        names
+    }
+
     pub(in crate::backend::direct_wasm) fn collect_user_function_raw_assigned_binding_names(
         &self,
         user_function: &UserFunction,
@@ -54,7 +83,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         names.retain(|name| {
             let source_name = scoped_binding_source_name(name).unwrap_or(name);
-            !user_function.scope_bindings.contains(source_name)
+            !user_function_declares_source_binding(user_function, source_name)
                 && !self.user_function_update_targets_immutable_class_binding(user_function, name)
         });
         names
@@ -74,7 +103,7 @@ impl<'a> FunctionCompiler<'a> {
                 if source_name == "this" || source_name == "arguments" {
                     continue;
                 }
-                if user_function.scope_bindings.contains(&source_name) {
+                if user_function_declares_source_binding(user_function, &source_name) {
                     continue;
                 }
                 names.insert(source_name);
@@ -107,7 +136,7 @@ impl<'a> FunctionCompiler<'a> {
             if source_name == "this" || source_name == "arguments" {
                 continue;
             }
-            if user_function.scope_bindings.contains(&source_name) {
+            if user_function_declares_source_binding(user_function, &source_name) {
                 continue;
             }
             if self.user_function_update_targets_immutable_class_binding(user_function, name) {

@@ -1118,6 +1118,7 @@ impl<'a> FunctionCompiler<'a> {
             &snapshot.values.value_bindings,
             name,
         );
+        global_semantics.values.rebuild_identifier_alias_bindings();
         Self::restore_try_metadata_map_entry(
             &mut global_semantics.values.array_bindings,
             &snapshot.values.array_bindings,

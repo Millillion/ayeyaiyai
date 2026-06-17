@@ -575,6 +575,33 @@ impl<'a> FunctionCompiler<'a> {
                 .sync_global_object_prototype_expression(name, None);
             return;
         }
+        let user_function_call_object_literal_prototype =
+            |compiler: &Self, callee: &Expression, arguments: &[CallArgument]| {
+                if arguments
+                    .iter()
+                    .any(|argument| matches!(argument, CallArgument::Spread(_)))
+                {
+                    return None;
+                }
+                let LocalFunctionBinding::User(function_name) =
+                    compiler.resolve_function_binding_from_expression(callee)?
+                else {
+                    return None;
+                };
+                let function = compiler.resolve_registered_function_declaration(&function_name)?;
+                if function.kind != FunctionKind::Ordinary {
+                    return None;
+                }
+                let [Statement::Return(Expression::Object(entries))] = function.body.as_slice()
+                else {
+                    return None;
+                };
+                let returned_literal = Expression::Object(entries.clone());
+                Some(
+                    object_literal_prototype_expression(&returned_literal)
+                        .unwrap_or_else(|| Self::prototype_member_expression("Object")),
+                )
+            };
         let prototype_from_value = |compiler: &Self, expression: &Expression| {
             object_literal_prototype_expression(expression)
                 .or_else(|| {
@@ -602,10 +629,11 @@ impl<'a> FunctionCompiler<'a> {
                     })
                 })
                 .or_else(|| {
-                    let Expression::Call { .. } = expression else {
+                    let Expression::Call { callee, arguments } = expression else {
                         return None;
                     };
-                    compiler.resolve_static_object_prototype_expression(expression)
+                    user_function_call_object_literal_prototype(compiler, callee, arguments)
+                        .or_else(|| compiler.resolve_static_object_prototype_expression(expression))
                 })
         };
         let prototype = prototype_from_value(self, value).or_else(|| {

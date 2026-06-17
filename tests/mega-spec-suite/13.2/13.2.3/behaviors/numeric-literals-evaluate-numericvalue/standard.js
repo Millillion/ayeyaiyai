@@ -1,0 +1,132 @@
+// behavior: numeric-literals-evaluate-numericvalue
+// expected: pass
+// goal: script
+// size: standard
+// variant: script.sloppy
+
+var score = 0;
+function check(condition, label) {
+if (!condition) {
+throw label;
+}
+score = score + 1;
+return true;
+}
+function sameNumber(value) { return value; }
+function sameBigInt(value) { return value; }
+var decimalLiteral0 = 17;
+check(decimalLiteral0 === 17, 'decimal numeric 0');
+var binaryLiteral0 = 0b10001;
+check(binaryLiteral0 === 17, 'binary numeric 0');
+var octalLiteral0 = 0o21;
+check(octalLiteral0 === 17, 'octal numeric 0');
+var hexLiteral0 = 0x11;
+check(hexLiteral0 === 17, 'hex numeric 0');
+var separatedLiteral0 = 1_017;
+check(separatedLiteral0 === 1017, 'separator numeric 0');
+var exponentLiteral0 = 17e0;
+check(exponentLiteral0 === 17, 'exponent numeric 0');
+var fractionLiteral0 = 17.5;
+check(fractionLiteral0 - 0.5 === 17, 'fraction numeric 0');
+var leadingFractionLiteral0 = .5;
+check(leadingFractionLiteral0 === 0.5, 'leading fraction numeric 0');
+var trailingFractionLiteral0 = 17.;
+check(trailingFractionLiteral0 === 17, 'trailing fraction numeric 0');
+check(sameNumber(17) === decimalLiteral0, 'number argument 0');
+var bigintLiteral0 = 17n;
+check(bigintLiteral0 === 17n, 'bigint numeric 0');
+check(sameBigInt(bigintLiteral0) === 17n, 'bigint argument 0');
+check((bigintLiteral0 + 1n) === 18n, 'bigint add 0');
+var decimalLiteral1 = 18;
+check(decimalLiteral1 === 18, 'decimal numeric 1');
+var binaryLiteral1 = 0b10010;
+check(binaryLiteral1 === 18, 'binary numeric 1');
+var octalLiteral1 = 0o22;
+check(octalLiteral1 === 18, 'octal numeric 1');
+var hexLiteral1 = 0x12;
+check(hexLiteral1 === 18, 'hex numeric 1');
+var separatedLiteral1 = 1_018;
+check(separatedLiteral1 === 1018, 'separator numeric 1');
+var exponentLiteral1 = 18e0;
+check(exponentLiteral1 === 18, 'exponent numeric 1');
+var fractionLiteral1 = 18.5;
+check(fractionLiteral1 - 0.5 === 18, 'fraction numeric 1');
+var leadingFractionLiteral1 = .5;
+check(leadingFractionLiteral1 === 0.5, 'leading fraction numeric 1');
+var trailingFractionLiteral1 = 18.;
+check(trailingFractionLiteral1 === 18, 'trailing fraction numeric 1');
+check(sameNumber(18) === decimalLiteral1, 'number argument 1');
+var bigintLiteral1 = 18n;
+check(bigintLiteral1 === 18n, 'bigint numeric 1');
+check(sameBigInt(bigintLiteral1) === 18n, 'bigint argument 1');
+check((bigintLiteral1 + 1n) === 19n, 'bigint add 1');
+var decimalLiteral2 = 19;
+check(decimalLiteral2 === 19, 'decimal numeric 2');
+var binaryLiteral2 = 0b10011;
+check(binaryLiteral2 === 19, 'binary numeric 2');
+var octalLiteral2 = 0o23;
+check(octalLiteral2 === 19, 'octal numeric 2');
+var hexLiteral2 = 0x13;
+check(hexLiteral2 === 19, 'hex numeric 2');
+var separatedLiteral2 = 1_019;
+check(separatedLiteral2 === 1019, 'separator numeric 2');
+var exponentLiteral2 = 19e0;
+check(exponentLiteral2 === 19, 'exponent numeric 2');
+var fractionLiteral2 = 19.5;
+check(fractionLiteral2 - 0.5 === 19, 'fraction numeric 2');
+var leadingFractionLiteral2 = .5;
+check(leadingFractionLiteral2 === 0.5, 'leading fraction numeric 2');
+var trailingFractionLiteral2 = 19.;
+check(trailingFractionLiteral2 === 19, 'trailing fraction numeric 2');
+check(sameNumber(19) === decimalLiteral2, 'number argument 2');
+var bigintLiteral2 = 19n;
+check(bigintLiteral2 === 19n, 'bigint numeric 2');
+check(sameBigInt(bigintLiteral2) === 19n, 'bigint argument 2');
+check((bigintLiteral2 + 1n) === 20n, 'bigint add 2');
+var decimalLiteral3 = 20;
+check(decimalLiteral3 === 20, 'decimal numeric 3');
+var binaryLiteral3 = 0b10100;
+check(binaryLiteral3 === 20, 'binary numeric 3');
+var octalLiteral3 = 0o24;
+check(octalLiteral3 === 20, 'octal numeric 3');
+var hexLiteral3 = 0x14;
+check(hexLiteral3 === 20, 'hex numeric 3');
+var separatedLiteral3 = 1_020;
+check(separatedLiteral3 === 1020, 'separator numeric 3');
+var exponentLiteral3 = 20e0;
+check(exponentLiteral3 === 20, 'exponent numeric 3');
+var fractionLiteral3 = 20.5;
+check(fractionLiteral3 - 0.5 === 20, 'fraction numeric 3');
+var leadingFractionLiteral3 = .5;
+check(leadingFractionLiteral3 === 0.5, 'leading fraction numeric 3');
+var trailingFractionLiteral3 = 20.;
+check(trailingFractionLiteral3 === 20, 'trailing fraction numeric 3');
+check(sameNumber(20) === decimalLiteral3, 'number argument 3');
+var bigintLiteral3 = 20n;
+check(bigintLiteral3 === 20n, 'bigint numeric 3');
+check(sameBigInt(bigintLiteral3) === 20n, 'bigint argument 3');
+check((bigintLiteral3 + 1n) === 21n, 'bigint add 3');
+var decimalLiteral4 = 21;
+check(decimalLiteral4 === 21, 'decimal numeric 4');
+var binaryLiteral4 = 0b10101;
+check(binaryLiteral4 === 21, 'binary numeric 4');
+var octalLiteral4 = 0o25;
+check(octalLiteral4 === 21, 'octal numeric 4');
+var hexLiteral4 = 0x15;
+check(hexLiteral4 === 21, 'hex numeric 4');
+var separatedLiteral4 = 1_021;
+check(separatedLiteral4 === 1021, 'separator numeric 4');
+var exponentLiteral4 = 21e0;
+check(exponentLiteral4 === 21, 'exponent numeric 4');
+var fractionLiteral4 = 21.5;
+check(fractionLiteral4 - 0.5 === 21, 'fraction numeric 4');
+var leadingFractionLiteral4 = .5;
+check(leadingFractionLiteral4 === 0.5, 'leading fraction numeric 4');
+var trailingFractionLiteral4 = 21.;
+check(trailingFractionLiteral4 === 21, 'trailing fraction numeric 4');
+check(sameNumber(21) === decimalLiteral4, 'number argument 4');
+var bigintLiteral4 = 21n;
+check(bigintLiteral4 === 21n, 'bigint numeric 4');
+check(sameBigInt(bigintLiteral4) === 21n, 'bigint argument 4');
+check((bigintLiteral4 + 1n) === 22n, 'bigint add 4');
+console.log('numeric-literals-evaluate-numericvalue standard ' + score);

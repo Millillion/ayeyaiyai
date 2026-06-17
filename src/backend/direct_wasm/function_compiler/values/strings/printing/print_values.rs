@@ -1,5 +1,9 @@
 use super::*;
 
+// Object printing is speculative; large user-function calls should run
+// normally instead of being statically executed only to discover print shape.
+const PRINT_OBJECT_CALL_STATIC_STATEMENT_BUDGET: usize = 40;
+
 fn format_static_number(value: f64) -> String {
     js_console_number_to_string(value)
 }
@@ -13,6 +17,15 @@ fn is_direct_eval_call_expression(value: &Expression) -> bool {
 }
 
 impl<'a> FunctionCompiler<'a> {
+    fn emitted_numeric_identifier_should_print_from_runtime(&self, name: &str) -> bool {
+        self.state.emission.emitted_value_bindings.contains(name)
+            && self
+                .infer_value_kind(&Expression::Identifier(name.to_string()))
+                .is_some_and(|kind| {
+                    matches!(kind, StaticValueKind::Number | StaticValueKind::Unknown)
+                })
+    }
+
     fn print_expression_has_no_runtime_side_effects(value: &Expression) -> bool {
         match value {
             Expression::Assign { .. }
@@ -573,6 +586,9 @@ impl<'a> FunctionCompiler<'a> {
         {
             return self.emit_print_object_entries(printable_entries);
         }
+        if self.static_print_object_call_exceeds_budget(value) {
+            return Ok(false);
+        }
 
         let Some(object_binding) = self.resolve_object_binding_from_expression(value) else {
             return Ok(false);
@@ -600,6 +616,19 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         }
         self.emit_print_object_entries(entries)
+    }
+
+    fn static_print_object_call_exceeds_budget(&self, value: &Expression) -> bool {
+        let Expression::Call { callee, .. } = value else {
+            return false;
+        };
+        let Some(LocalFunctionBinding::User(function_name)) =
+            self.resolve_function_binding_from_expression(callee)
+        else {
+            return false;
+        };
+        self.resolve_registered_function_declaration(&function_name)
+            .is_some_and(|function| function.body.len() > PRINT_OBJECT_CALL_STATIC_STATEMENT_BUDGET)
     }
 
     pub(in crate::backend::direct_wasm) fn emit_print(
@@ -705,6 +734,11 @@ impl<'a> FunctionCompiler<'a> {
                 Ok(())
             }
             _ => {
+                if let Expression::Identifier(name) = value
+                    && self.emitted_numeric_identifier_should_print_from_runtime(name)
+                {
+                    return self.emit_runtime_print_numeric_value(value);
+                }
                 let depends_on_active_loop_assignment =
                     self.expression_depends_on_active_loop_assignment(value);
                 let direct_eval_call = is_direct_eval_call_expression(value);

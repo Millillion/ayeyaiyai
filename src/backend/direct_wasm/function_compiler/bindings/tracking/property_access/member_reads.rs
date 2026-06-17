@@ -82,7 +82,7 @@ impl<'a> FunctionCompiler<'a> {
         }
         if matches!(static_property, Expression::String(property_name) if property_name == "length")
         {
-            self.push_i32_const(text.chars().count() as i32);
+            self.push_i32_const(text.encode_utf16().count() as i32);
             return Ok(true);
         }
 
@@ -170,6 +170,17 @@ impl<'a> FunctionCompiler<'a> {
             return false;
         }
 
+        if let Some(object_binding) = self.resolve_object_binding_from_expression(object)
+            && let Some(descriptor) =
+                object_binding_lookup_descriptor(&object_binding, &canonical_property)
+            && (descriptor.has_get
+                || descriptor.has_set
+                || descriptor.getter.is_some()
+                || descriptor.setter.is_some())
+        {
+            return true;
+        }
+
         let Some(shadow_binding_name) = self
             .runtime_object_property_shadow_binding_name_for_expression(
                 object,
@@ -201,11 +212,17 @@ impl<'a> FunctionCompiler<'a> {
         if trace_member_reads {
             eprintln!("member_read:start object={object:?} property={property:?}");
         }
+        let object_has_runtime_array_base =
+            self.expression_has_direct_runtime_array_state_base(object);
         let static_array_property = if inline_summary_side_effect_free_expression(property)
             && !self.expression_depends_on_active_loop_assignment(property)
         {
-            self.resolve_property_key_expression(property)
-                .unwrap_or_else(|| self.materialize_static_expression(property))
+            let resolved_property = self.resolve_property_key_expression(property);
+            if object_has_runtime_array_base && resolved_property.is_none() {
+                property.clone()
+            } else {
+                resolved_property.unwrap_or_else(|| self.materialize_static_expression(property))
+            }
         } else {
             property.clone()
         };
@@ -262,8 +279,6 @@ impl<'a> FunctionCompiler<'a> {
         let object_uses_internal_assignment_temp =
             Self::expression_references_internal_assignment_temp(object);
         let object_contains_await = Self::expression_contains_await_for_user_call_runtime(object);
-        let object_has_runtime_array_base =
-            self.expression_has_direct_runtime_array_state_base(object);
         let object_is_runtime_array_element_base =
             matches!(object, Expression::Member { .. }) && object_has_runtime_array_base;
         let object_may_be_module_namespace =
@@ -279,6 +294,34 @@ impl<'a> FunctionCompiler<'a> {
         if self.emit_internal_temp_function_name_member_read(object, &static_array_property)? {
             if trace_member_reads {
                 eprintln!("member_read:internal_temp_function_name_hit object={object:?}");
+            }
+            return Ok(());
+        }
+        let early_dynamic_descriptor_member_read = matches!(
+            (object, &static_array_property),
+            (Expression::Identifier(name), Expression::String(property_name))
+                if matches!(
+                    property_name.as_str(),
+                    "value" | "configurable" | "enumerable" | "writable" | "get" | "set"
+                ) && self.local_binding_is_dynamic_property_descriptor_result(name)
+        );
+        let early_nested_assert_helper_member =
+            Self::expression_is_nested_assert_helper_member_parts(object, property);
+        if !skip_static_special_for_descriptor_member
+            && !object_contains_await
+            && !object_uses_internal_assignment_temp
+            && !object_is_runtime_array_element_base
+            && !object_may_be_module_namespace
+            && !early_dynamic_descriptor_member_read
+            && !early_nested_assert_helper_member
+            && inline_summary_side_effect_free_expression(object)
+            && inline_summary_side_effect_free_expression(property)
+            && self.emit_static_object_binding_data_member_read(object, &static_array_property)?
+        {
+            if trace_member_reads {
+                eprintln!(
+                    "member_read:early_static_data_hit object={object:?} property={static_array_property:?}"
+                );
             }
             return Ok(());
         }

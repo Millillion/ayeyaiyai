@@ -14,7 +14,24 @@ thread_local! {
         std::cell::RefCell::new((0, HashMap::new()));
 }
 
+const STATIC_ANALYSIS_STATEMENT_BUDGET: usize = 200;
+
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn user_function_exceeds_static_call_analysis_budget(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| function.body.len() > STATIC_ANALYSIS_STATEMENT_BUDGET)
+    }
+
+    pub(in crate::backend::direct_wasm) fn current_function_exceeds_static_analysis_budget(
+        &self,
+    ) -> bool {
+        self.current_user_function_declaration()
+            .is_some_and(|function| function.body.len() > STATIC_ANALYSIS_STATEMENT_BUDGET)
+    }
+
     pub(in crate::backend::direct_wasm) fn user_function(
         &self,
         function_name: &str,

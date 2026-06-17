@@ -78,6 +78,22 @@ impl<'a> ProgramCompilationSession<'a> {
         &mut self,
         prepared_program: PreparedBackendProgram,
     ) -> DirectResult<EmittedBackendProgram> {
+        let trace_timing = crate::ayy_env_flag!("AYY_TRACE_COMPILE_TIMING");
+        let timing_start = trace_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |step: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "emit_program_timing step={step} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=start");
         }
@@ -85,16 +101,20 @@ impl<'a> ProgramCompilationSession<'a> {
             &prepared_program.start,
             prepared_program.analysis.function_compiler_inputs(),
         )?;
+        trace_step("compile_start");
         let compiled_functions =
             self.compile_runtime_called_registered_functions(&prepared_program)?;
+        trace_step("compile_runtime_functions");
         if crate::ayy_env_flag!("AYY_TRACE_PROGRAM_COMPILE") {
             eprintln!("program_compile=layout");
         }
         // Start/function lowering can still reserve implicit globals and related runtime slots,
         // so the final module layout must be captured after compilation completes.
         let module_layout = self.capture_module_layout();
+        trace_step("capture_layout");
         let (int_min_ptr, int_min_len) = self.compiler.intern_string(b"-2147483648".to_vec());
         let (string_data, next_data_offset) = self.compiler.snapshot_module_data();
+        trace_step("snapshot_data");
 
         Ok(EmittedBackendProgram {
             compiled_start,

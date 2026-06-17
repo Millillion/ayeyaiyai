@@ -1068,7 +1068,7 @@ impl<'a> FunctionCompiler<'a> {
             && reference_implicit_global.is_none();
         let snapshot_store_value = self
             .snapshot_assignment_value_for_static_store(name, value)
-            .or_else(|| self.snapshot_effectful_getter_member_read_for_static_store(value));
+            .or_else(|| self.snapshot_effectful_member_read_for_static_store(value));
         self.emit_numeric_expression(value)?;
         if let Some(scope_object) = scoped_target {
             let value_local = self.allocate_temp_local();
@@ -1346,6 +1346,99 @@ impl<'a> FunctionCompiler<'a> {
         Ok(true)
     }
 
+    fn expression_has_runtime_getter_read_effects(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Member { object, property } => {
+                self.member_getter_value_requires_runtime_read_effects(object, property)
+                    || self.expression_has_runtime_getter_read_effects(object)
+                    || self.expression_has_runtime_getter_read_effects(property)
+            }
+            Expression::Unary { expression, .. }
+            | Expression::Await(expression)
+            | Expression::EnumerateKeys(expression)
+            | Expression::GetIterator(expression)
+            | Expression::IteratorClose(expression) => {
+                self.expression_has_runtime_getter_read_effects(expression)
+            }
+            Expression::Binary { left, right, .. } => {
+                self.expression_has_runtime_getter_read_effects(left)
+                    || self.expression_has_runtime_getter_read_effects(right)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                self.expression_has_runtime_getter_read_effects(condition)
+                    || self.expression_has_runtime_getter_read_effects(then_expression)
+                    || self.expression_has_runtime_getter_read_effects(else_expression)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| self.expression_has_runtime_getter_read_effects(expression)),
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(expression) | ArrayElement::Spread(expression) => {
+                    self.expression_has_runtime_getter_read_effects(expression)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    self.expression_has_runtime_getter_read_effects(key)
+                        || self.expression_has_runtime_getter_read_effects(value)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    self.expression_has_runtime_getter_read_effects(key)
+                        || self.expression_has_runtime_getter_read_effects(getter)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    self.expression_has_runtime_getter_read_effects(key)
+                        || self.expression_has_runtime_getter_read_effects(setter)
+                }
+                ObjectEntry::Spread(expression) => {
+                    self.expression_has_runtime_getter_read_effects(expression)
+                }
+            }),
+            Expression::Call { callee, arguments }
+            | Expression::New { callee, arguments }
+            | Expression::SuperCall { callee, arguments } => {
+                self.expression_has_runtime_getter_read_effects(callee)
+                    || arguments.iter().any(|argument| {
+                        self.expression_has_runtime_getter_read_effects(argument.expression())
+                    })
+            }
+            Expression::Assign { value, .. } => {
+                self.expression_has_runtime_getter_read_effects(value)
+            }
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => {
+                self.expression_has_runtime_getter_read_effects(object)
+                    || self.expression_has_runtime_getter_read_effects(property)
+                    || self.expression_has_runtime_getter_read_effects(value)
+            }
+            Expression::AssignSuperMember { property, value } => {
+                self.expression_has_runtime_getter_read_effects(property)
+                    || self.expression_has_runtime_getter_read_effects(value)
+            }
+            Expression::SuperMember { property } => {
+                self.expression_has_runtime_getter_read_effects(property)
+            }
+            Expression::Identifier(_)
+            | Expression::Update { .. }
+            | Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::This
+            | Expression::NewTarget
+            | Expression::Sent => false,
+        }
+    }
+
     pub(in crate::backend::direct_wasm) fn emit_member_expression_value(
         &mut self,
         object: &Expression,
@@ -1404,9 +1497,51 @@ impl<'a> FunctionCompiler<'a> {
             || self.expression_has_direct_runtime_array_state_base(object);
         let object_may_be_module_namespace =
             self.expression_may_resolve_to_module_namespace_object(object);
-        let static_array_property = self
-            .resolve_property_key_expression(property)
-            .unwrap_or_else(|| self.materialize_static_expression(property));
+        let resolved_static_array_property = self.resolve_property_key_expression(property);
+        let static_array_property =
+            if object_uses_runtime_array_state && resolved_static_array_property.is_none() {
+                property.clone()
+            } else {
+                resolved_static_array_property
+                    .unwrap_or_else(|| self.materialize_static_expression(property))
+            };
+        if !object_is_internal_assignment_temp
+            && !object_contains_await
+            && !object_uses_runtime_array_state
+            && inline_summary_side_effect_free_expression(object)
+            && inline_summary_side_effect_free_expression(property)
+            && !self.expression_has_runtime_getter_read_effects(object)
+            && !self.is_private_member_read_property(&static_array_property)
+            && self
+                .resolve_object_binding_from_expression(object)
+                .is_some_and(|object_binding| {
+                    let canonical_property =
+                        self.canonical_object_property_expression(&static_array_property);
+                    self.resolve_object_binding_property_value(&object_binding, &canonical_property)
+                        .or_else(|| {
+                            self.resolve_object_binding_property_value(
+                                &object_binding,
+                                &static_array_property,
+                            )
+                        })
+                        .is_some()
+                })
+        {
+            if self
+                .resolve_property_key_coercion_binding(property)
+                .is_some()
+            {
+                self.emit_property_key_expression_effects(property)?;
+            }
+            if self.emit_static_object_binding_data_member_read(object, &static_array_property)? {
+                if trace_member_reads {
+                    eprintln!(
+                        "member_expr:early_static_data object={object:?} property={property:?}"
+                    );
+                }
+                return Ok(());
+            }
+        }
         if !object_is_internal_assignment_temp
             && !object_contains_await
             && self.emit_test262_realm_global_constructor_member_value(
@@ -1663,8 +1798,12 @@ impl<'a> FunctionCompiler<'a> {
             )?;
         }
         let effective_property = resolved_property.as_ref().unwrap_or(property);
+        let materialized_effectful_object = (!inline_summary_side_effect_free_expression(object))
+            .then(|| self.resolve_materialized_effectful_member_base_object(object))
+            .flatten();
         let read_object = self
             .private_member_read_receiver_after_evaluation(object, effective_property)
+            .or(materialized_effectful_object)
             .unwrap_or_else(|| object.clone());
         if !object_uses_runtime_array_state
             && object_may_be_module_namespace

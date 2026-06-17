@@ -1,6 +1,30 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn emit_delayed_property_key_coercion_binding_effects(
+        &mut self,
+        binding: &LocalFunctionBinding,
+    ) -> DirectResult<()> {
+        if let LocalFunctionBinding::User(function_name) = binding
+            && let Some(user_function) = self.user_function(function_name).cloned()
+        {
+            for name in self.collect_user_function_call_effect_nonlocal_bindings(&user_function) {
+                if let Some(array_binding) = self.global_array_binding(&name).cloned() {
+                    self.emit_force_global_runtime_array_state_from_binding(&name, &array_binding)?;
+                }
+            }
+        }
+        let result_local = self.allocate_temp_local();
+        let _ = self.emit_binding_call_result_to_local_with_explicit_this(
+            binding,
+            &[],
+            &Expression::Undefined,
+            JS_UNDEFINED_TAG,
+            result_local,
+        )?;
+        Ok(())
+    }
+
     fn resolve_property_key_logical_assignment_binding_result(
         &self,
         expression: &Expression,

@@ -150,6 +150,17 @@ impl<'a> FunctionCompiler<'a> {
         else {
             return Ok(false);
         };
+        if !self.is_private_member_read_property(property)
+            && let Some(owner_name) =
+                self.runtime_object_property_shadow_owner_name_for_expression(object)
+            && self.runtime_object_property_shadow_value_is_statically_present_for_owner(
+                &owner_name,
+                property,
+            )
+        {
+            self.push_global_get(binding.value_index);
+            return Ok(true);
+        }
         let deleted_binding =
             self.resolve_runtime_object_property_shadow_deleted_binding(object, property);
         let is_private_property = self.is_private_member_read_property(property);

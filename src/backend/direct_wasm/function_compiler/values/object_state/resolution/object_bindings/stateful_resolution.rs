@@ -884,6 +884,11 @@ impl<'a> FunctionCompiler<'a> {
                 if self.resolve_iterator_source_kind(expression).is_some() {
                     return Some(expression.clone());
                 }
+                if let Some(value) =
+                    self.resolve_simple_array_append_return_argument_static_call_value(expression)
+                {
+                    return Some(value);
+                }
                 self.evaluate_static_expression_with_state(expression, environment)
                     .or_else(|| {
                         self.materialize_static_expression_with_state(expression, environment)

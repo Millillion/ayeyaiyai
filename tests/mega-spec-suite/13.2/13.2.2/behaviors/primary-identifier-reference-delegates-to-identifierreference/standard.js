@@ -1,0 +1,250 @@
+// behavior: primary-identifier-reference-delegates-to-identifierreference
+// expected: pass
+// goal: script
+// size: standard
+// variant: script.sloppy
+
+var primaryGlobal = 10;
+var primaryShadow = 200;
+var primaryScore = 0;
+function checkPrimary(condition, label) {
+if (!condition) {
+throw label;
+}
+primaryScore = primaryScore + 1;
+return true;
+}
+function readPrimaryArgument(value) {
+return value + primaryGlobal;
+}
+function makePrimaryClosure(seed) {
+var primaryGlobal = seed;
+return function(extra) { return primaryGlobal + extra; };
+}
+function shadowPrimaryBinding(input) {
+var primaryGlobal = input;
+primaryGlobal = primaryGlobal + 3;
+checkPrimary(primaryGlobal === input + 3, "shadow local write");
+return primaryGlobal;
+}
+checkPrimary(primaryGlobal === 10, "initial primary read");
+primaryGlobal = primaryGlobal + 5;
+checkPrimary(primaryGlobal === 15, "primary assignment writes binding");
+var postValue = primaryGlobal++;
+checkPrimary(postValue === 15, "post increment result");
+checkPrimary(primaryGlobal === 16, "post increment write");
+var preValue = ++primaryGlobal;
+checkPrimary(preValue === 17, "pre increment result");
+checkPrimary(primaryGlobal === 17, "pre increment write");
+var closureCheck = makePrimaryClosure(30);
+checkPrimary(closureCheck(4) === 34, "closure captures nearest primary");
+checkPrimary(shadowPrimaryBinding(40) === 43, "shadow function returns local");
+checkPrimary(primaryGlobal === 17, "shadow does not overwrite outer");
+checkPrimary(readPrimaryArgument(8) === 25, "identifier in call argument value");
+var localPrimary0 = primaryGlobal + 0;
+checkPrimary(localPrimary0 === primaryGlobal + 0, "local read 0");
+localPrimary0 = localPrimary0 + primaryShadow;
+checkPrimary(localPrimary0 === primaryGlobal + 0 + primaryShadow, "local write 0");
+var primaryArray0 = [primaryGlobal, localPrimary0, primaryShadow];
+checkPrimary(primaryArray0[0] === primaryGlobal, "array primary 0");
+var primaryObject0 = { value: localPrimary0, alias: primaryGlobal };
+checkPrimary(primaryObject0.alias + primaryObject0.value === primaryGlobal + localPrimary0, "object primary 0");
+primaryGlobal = primaryGlobal + 1;
+primaryGlobal = primaryGlobal - 1;
+checkPrimary(primaryGlobal === 17, "stable outer 0");
+function nestedPrimary0(input) {
+var primaryGlobal = input + 0;
+return primaryGlobal + primaryShadow;
+}
+checkPrimary(nestedPrimary0(1) === 1 + 0 + primaryShadow, "nested nearest 0");
+var closurePrimary0 = makePrimaryClosure(50);
+checkPrimary(closurePrimary0(0) === 50 + 0, "closure primary 0");
+var localPrimary1 = primaryGlobal + 1;
+checkPrimary(localPrimary1 === primaryGlobal + 1, "local read 1");
+localPrimary1 = localPrimary1 + primaryShadow;
+checkPrimary(localPrimary1 === primaryGlobal + 1 + primaryShadow, "local write 1");
+var primaryArray1 = [primaryGlobal, localPrimary1, primaryShadow];
+checkPrimary(primaryArray1[0] === primaryGlobal, "array primary 1");
+var primaryObject1 = { value: localPrimary1, alias: primaryGlobal };
+checkPrimary(primaryObject1.alias + primaryObject1.value === primaryGlobal + localPrimary1, "object primary 1");
+primaryGlobal = primaryGlobal + 2;
+primaryGlobal = primaryGlobal - 2;
+checkPrimary(primaryGlobal === 17, "stable outer 1");
+var localPrimary2 = primaryGlobal + 2;
+checkPrimary(localPrimary2 === primaryGlobal + 2, "local read 2");
+localPrimary2 = localPrimary2 + primaryShadow;
+checkPrimary(localPrimary2 === primaryGlobal + 2 + primaryShadow, "local write 2");
+var primaryArray2 = [primaryGlobal, localPrimary2, primaryShadow];
+checkPrimary(primaryArray2[0] === primaryGlobal, "array primary 2");
+var primaryObject2 = { value: localPrimary2, alias: primaryGlobal };
+checkPrimary(primaryObject2.alias + primaryObject2.value === primaryGlobal + localPrimary2, "object primary 2");
+primaryGlobal = primaryGlobal + 3;
+primaryGlobal = primaryGlobal - 3;
+checkPrimary(primaryGlobal === 17, "stable outer 2");
+var localPrimary3 = primaryGlobal + 3;
+checkPrimary(localPrimary3 === primaryGlobal + 3, "local read 3");
+localPrimary3 = localPrimary3 + primaryShadow;
+checkPrimary(localPrimary3 === primaryGlobal + 3 + primaryShadow, "local write 3");
+var primaryArray3 = [primaryGlobal, localPrimary3, primaryShadow];
+checkPrimary(primaryArray3[0] === primaryGlobal, "array primary 3");
+var primaryObject3 = { value: localPrimary3, alias: primaryGlobal };
+checkPrimary(primaryObject3.alias + primaryObject3.value === primaryGlobal + localPrimary3, "object primary 3");
+primaryGlobal = primaryGlobal + 4;
+primaryGlobal = primaryGlobal - 4;
+checkPrimary(primaryGlobal === 17, "stable outer 3");
+var localPrimary4 = primaryGlobal + 4;
+checkPrimary(localPrimary4 === primaryGlobal + 4, "local read 4");
+localPrimary4 = localPrimary4 + primaryShadow;
+checkPrimary(localPrimary4 === primaryGlobal + 4 + primaryShadow, "local write 4");
+var primaryArray4 = [primaryGlobal, localPrimary4, primaryShadow];
+checkPrimary(primaryArray4[0] === primaryGlobal, "array primary 4");
+var primaryObject4 = { value: localPrimary4, alias: primaryGlobal };
+checkPrimary(primaryObject4.alias + primaryObject4.value === primaryGlobal + localPrimary4, "object primary 4");
+primaryGlobal = primaryGlobal + 5;
+primaryGlobal = primaryGlobal - 5;
+checkPrimary(primaryGlobal === 17, "stable outer 4");
+function nestedPrimary4(input) {
+var primaryGlobal = input + 4;
+return primaryGlobal + primaryShadow;
+}
+checkPrimary(nestedPrimary4(5) === 5 + 4 + primaryShadow, "nested nearest 4");
+var localPrimary5 = primaryGlobal + 5;
+checkPrimary(localPrimary5 === primaryGlobal + 5, "local read 5");
+localPrimary5 = localPrimary5 + primaryShadow;
+checkPrimary(localPrimary5 === primaryGlobal + 5 + primaryShadow, "local write 5");
+var primaryArray5 = [primaryGlobal, localPrimary5, primaryShadow];
+checkPrimary(primaryArray5[0] === primaryGlobal, "array primary 5");
+var primaryObject5 = { value: localPrimary5, alias: primaryGlobal };
+checkPrimary(primaryObject5.alias + primaryObject5.value === primaryGlobal + localPrimary5, "object primary 5");
+primaryGlobal = primaryGlobal + 6;
+primaryGlobal = primaryGlobal - 6;
+checkPrimary(primaryGlobal === 17, "stable outer 5");
+var closurePrimary5 = makePrimaryClosure(55);
+checkPrimary(closurePrimary5(5) === 55 + 5, "closure primary 5");
+var localPrimary6 = primaryGlobal + 6;
+checkPrimary(localPrimary6 === primaryGlobal + 6, "local read 6");
+localPrimary6 = localPrimary6 + primaryShadow;
+checkPrimary(localPrimary6 === primaryGlobal + 6 + primaryShadow, "local write 6");
+var primaryArray6 = [primaryGlobal, localPrimary6, primaryShadow];
+checkPrimary(primaryArray6[0] === primaryGlobal, "array primary 6");
+var primaryObject6 = { value: localPrimary6, alias: primaryGlobal };
+checkPrimary(primaryObject6.alias + primaryObject6.value === primaryGlobal + localPrimary6, "object primary 6");
+primaryGlobal = primaryGlobal + 7;
+primaryGlobal = primaryGlobal - 7;
+checkPrimary(primaryGlobal === 17, "stable outer 6");
+var localPrimary7 = primaryGlobal + 7;
+checkPrimary(localPrimary7 === primaryGlobal + 7, "local read 7");
+localPrimary7 = localPrimary7 + primaryShadow;
+checkPrimary(localPrimary7 === primaryGlobal + 7 + primaryShadow, "local write 7");
+var primaryArray7 = [primaryGlobal, localPrimary7, primaryShadow];
+checkPrimary(primaryArray7[0] === primaryGlobal, "array primary 7");
+var primaryObject7 = { value: localPrimary7, alias: primaryGlobal };
+checkPrimary(primaryObject7.alias + primaryObject7.value === primaryGlobal + localPrimary7, "object primary 7");
+primaryGlobal = primaryGlobal + 1;
+primaryGlobal = primaryGlobal - 1;
+checkPrimary(primaryGlobal === 17, "stable outer 7");
+var localPrimary8 = primaryGlobal + 8;
+checkPrimary(localPrimary8 === primaryGlobal + 8, "local read 8");
+localPrimary8 = localPrimary8 + primaryShadow;
+checkPrimary(localPrimary8 === primaryGlobal + 8 + primaryShadow, "local write 8");
+var primaryArray8 = [primaryGlobal, localPrimary8, primaryShadow];
+checkPrimary(primaryArray8[0] === primaryGlobal, "array primary 8");
+var primaryObject8 = { value: localPrimary8, alias: primaryGlobal };
+checkPrimary(primaryObject8.alias + primaryObject8.value === primaryGlobal + localPrimary8, "object primary 8");
+primaryGlobal = primaryGlobal + 2;
+primaryGlobal = primaryGlobal - 2;
+checkPrimary(primaryGlobal === 17, "stable outer 8");
+function nestedPrimary8(input) {
+var primaryGlobal = input + 8;
+return primaryGlobal + primaryShadow;
+}
+checkPrimary(nestedPrimary8(9) === 9 + 8 + primaryShadow, "nested nearest 8");
+var localPrimary9 = primaryGlobal + 9;
+checkPrimary(localPrimary9 === primaryGlobal + 9, "local read 9");
+localPrimary9 = localPrimary9 + primaryShadow;
+checkPrimary(localPrimary9 === primaryGlobal + 9 + primaryShadow, "local write 9");
+var primaryArray9 = [primaryGlobal, localPrimary9, primaryShadow];
+checkPrimary(primaryArray9[0] === primaryGlobal, "array primary 9");
+var primaryObject9 = { value: localPrimary9, alias: primaryGlobal };
+checkPrimary(primaryObject9.alias + primaryObject9.value === primaryGlobal + localPrimary9, "object primary 9");
+primaryGlobal = primaryGlobal + 3;
+primaryGlobal = primaryGlobal - 3;
+checkPrimary(primaryGlobal === 17, "stable outer 9");
+var localPrimary10 = primaryGlobal + 10;
+checkPrimary(localPrimary10 === primaryGlobal + 10, "local read 10");
+localPrimary10 = localPrimary10 + primaryShadow;
+checkPrimary(localPrimary10 === primaryGlobal + 10 + primaryShadow, "local write 10");
+var primaryArray10 = [primaryGlobal, localPrimary10, primaryShadow];
+checkPrimary(primaryArray10[0] === primaryGlobal, "array primary 10");
+var primaryObject10 = { value: localPrimary10, alias: primaryGlobal };
+checkPrimary(primaryObject10.alias + primaryObject10.value === primaryGlobal + localPrimary10, "object primary 10");
+primaryGlobal = primaryGlobal + 4;
+primaryGlobal = primaryGlobal - 4;
+checkPrimary(primaryGlobal === 17, "stable outer 10");
+var closurePrimary10 = makePrimaryClosure(60);
+checkPrimary(closurePrimary10(10) === 60 + 10, "closure primary 10");
+var localPrimary11 = primaryGlobal + 11;
+checkPrimary(localPrimary11 === primaryGlobal + 11, "local read 11");
+localPrimary11 = localPrimary11 + primaryShadow;
+checkPrimary(localPrimary11 === primaryGlobal + 11 + primaryShadow, "local write 11");
+var primaryArray11 = [primaryGlobal, localPrimary11, primaryShadow];
+checkPrimary(primaryArray11[0] === primaryGlobal, "array primary 11");
+var primaryObject11 = { value: localPrimary11, alias: primaryGlobal };
+checkPrimary(primaryObject11.alias + primaryObject11.value === primaryGlobal + localPrimary11, "object primary 11");
+primaryGlobal = primaryGlobal + 5;
+primaryGlobal = primaryGlobal - 5;
+checkPrimary(primaryGlobal === 17, "stable outer 11");
+var localPrimary12 = primaryGlobal + 12;
+checkPrimary(localPrimary12 === primaryGlobal + 12, "local read 12");
+localPrimary12 = localPrimary12 + primaryShadow;
+checkPrimary(localPrimary12 === primaryGlobal + 12 + primaryShadow, "local write 12");
+var primaryArray12 = [primaryGlobal, localPrimary12, primaryShadow];
+checkPrimary(primaryArray12[0] === primaryGlobal, "array primary 12");
+var primaryObject12 = { value: localPrimary12, alias: primaryGlobal };
+checkPrimary(primaryObject12.alias + primaryObject12.value === primaryGlobal + localPrimary12, "object primary 12");
+primaryGlobal = primaryGlobal + 6;
+primaryGlobal = primaryGlobal - 6;
+checkPrimary(primaryGlobal === 17, "stable outer 12");
+function nestedPrimary12(input) {
+var primaryGlobal = input + 12;
+return primaryGlobal + primaryShadow;
+}
+checkPrimary(nestedPrimary12(13) === 13 + 12 + primaryShadow, "nested nearest 12");
+var localPrimary13 = primaryGlobal + 13;
+checkPrimary(localPrimary13 === primaryGlobal + 13, "local read 13");
+localPrimary13 = localPrimary13 + primaryShadow;
+checkPrimary(localPrimary13 === primaryGlobal + 13 + primaryShadow, "local write 13");
+var primaryArray13 = [primaryGlobal, localPrimary13, primaryShadow];
+checkPrimary(primaryArray13[0] === primaryGlobal, "array primary 13");
+var primaryObject13 = { value: localPrimary13, alias: primaryGlobal };
+checkPrimary(primaryObject13.alias + primaryObject13.value === primaryGlobal + localPrimary13, "object primary 13");
+primaryGlobal = primaryGlobal + 7;
+primaryGlobal = primaryGlobal - 7;
+checkPrimary(primaryGlobal === 17, "stable outer 13");
+var localPrimary14 = primaryGlobal + 14;
+checkPrimary(localPrimary14 === primaryGlobal + 14, "local read 14");
+localPrimary14 = localPrimary14 + primaryShadow;
+checkPrimary(localPrimary14 === primaryGlobal + 14 + primaryShadow, "local write 14");
+var primaryArray14 = [primaryGlobal, localPrimary14, primaryShadow];
+checkPrimary(primaryArray14[0] === primaryGlobal, "array primary 14");
+var primaryObject14 = { value: localPrimary14, alias: primaryGlobal };
+checkPrimary(primaryObject14.alias + primaryObject14.value === primaryGlobal + localPrimary14, "object primary 14");
+primaryGlobal = primaryGlobal + 1;
+primaryGlobal = primaryGlobal - 1;
+checkPrimary(primaryGlobal === 17, "stable outer 14");
+var localPrimary15 = primaryGlobal + 15;
+checkPrimary(localPrimary15 === primaryGlobal + 15, "local read 15");
+localPrimary15 = localPrimary15 + primaryShadow;
+checkPrimary(localPrimary15 === primaryGlobal + 15 + primaryShadow, "local write 15");
+var primaryArray15 = [primaryGlobal, localPrimary15, primaryShadow];
+checkPrimary(primaryArray15[0] === primaryGlobal, "array primary 15");
+var primaryObject15 = { value: localPrimary15, alias: primaryGlobal };
+checkPrimary(primaryObject15.alias + primaryObject15.value === primaryGlobal + localPrimary15, "object primary 15");
+primaryGlobal = primaryGlobal + 2;
+primaryGlobal = primaryGlobal - 2;
+checkPrimary(primaryGlobal === 17, "stable outer 15");
+var closurePrimary15 = makePrimaryClosure(65);
+checkPrimary(closurePrimary15(15) === 65 + 15, "closure primary 15");
+checkPrimary(primaryGlobal === 17, "final primary global");
+checkPrimary(primaryScore > 0, "score advanced");
+console.log("ok", primaryScore, primaryGlobal, primaryShadow);

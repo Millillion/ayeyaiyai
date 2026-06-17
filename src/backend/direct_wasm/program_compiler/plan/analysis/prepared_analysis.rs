@@ -2,6 +2,8 @@ use super::*;
 
 #[derive(Clone)]
 pub(in crate::backend::direct_wasm) struct PreparedProgramAnalysis {
+    pub(in crate::backend::direct_wasm) assigned_nonlocal_bindings:
+        Rc<HashMap<String, HashSet<String>>>,
     pub(in crate::backend::direct_wasm) assigned_nonlocal_binding_results:
         Rc<HashMap<String, HashMap<String, Expression>>>,
     pub(in crate::backend::direct_wasm) shared: PreparedSharedProgramContext,
@@ -9,6 +11,7 @@ pub(in crate::backend::direct_wasm) struct PreparedProgramAnalysis {
 
 impl PreparedProgramAnalysis {
     pub(in crate::backend::direct_wasm) fn new(
+        assigned_nonlocal_bindings: HashMap<String, HashSet<String>>,
         assigned_nonlocal_binding_results: HashMap<String, HashMap<String, Expression>>,
         user_function_metadata: HashMap<String, PreparedFunctionMetadata>,
         user_function_order: Vec<String>,
@@ -18,6 +21,7 @@ impl PreparedProgramAnalysis {
         global_static_semantics: GlobalStaticSemanticsSnapshot,
     ) -> Self {
         Self {
+            assigned_nonlocal_bindings: Rc::new(assigned_nonlocal_bindings),
             assigned_nonlocal_binding_results: Rc::new(assigned_nonlocal_binding_results),
             shared: PreparedSharedProgramContext {
                 user_function_metadata: Rc::new(user_function_metadata),
@@ -37,6 +41,13 @@ impl PreparedProgramAnalysis {
         function_name: &str,
     ) -> Option<&HashMap<String, Expression>> {
         self.assigned_nonlocal_binding_results.get(function_name)
+    }
+
+    pub(in crate::backend::direct_wasm) fn assigned_nonlocal_bindings(
+        &self,
+        function_name: &str,
+    ) -> Option<&HashSet<String>> {
+        self.assigned_nonlocal_bindings.get(function_name)
     }
 
     pub(in crate::backend::direct_wasm) fn user_function_metadata(
@@ -117,11 +128,18 @@ impl PreparedProgramAnalysis {
         self.assigned_nonlocal_binding_results.clone()
     }
 
+    pub(in crate::backend::direct_wasm) fn assigned_nonlocal_bindings_snapshot(
+        &self,
+    ) -> Rc<HashMap<String, HashSet<String>>> {
+        self.assigned_nonlocal_bindings.clone()
+    }
+
     pub(in crate::backend::direct_wasm) fn function_compiler_inputs(
         &self,
     ) -> PreparedFunctionCompilerInputs {
         PreparedFunctionCompilerInputs {
             shared_program: self.shared_program_context(),
+            assigned_nonlocal_bindings: self.assigned_nonlocal_bindings_snapshot(),
             assigned_nonlocal_binding_results: self.assigned_nonlocal_binding_results_snapshot(),
         }
     }

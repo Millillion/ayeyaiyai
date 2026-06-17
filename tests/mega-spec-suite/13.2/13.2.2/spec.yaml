@@ -1,0 +1,17 @@
+subclause: "13.2.2"
+title: Identifier Reference
+url: https://262.ecma-international.org/16.0/#sec-primary-expression-identifier-reference
+behaviors:
+  - primary-identifier-reference-delegates-to-identifierreference
+  - primary-identifier-reference-unresolvable-throws
+
+behavior_descriptions:
+  primary-identifier-reference-delegates-to-identifierreference: |
+    PrimaryExpression IdentifierReference uses the IdentifierReference
+    semantics from 13.1, so reading, assigning, updating, shadowing, closure
+    capture, and value contexts match the referenced binding.
+
+  primary-identifier-reference-unresolvable-throws: |
+    PrimaryExpression IdentifierReference uses IdentifierReference resolution
+    from 13.1, so reading a name with no resolved binding throws at runtime
+    after any preceding observable evaluation has completed.

@@ -1,6 +1,65 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    fn statement_list_reference_counts(statements: &[Statement]) -> HashMap<String, usize> {
+        let mut counts = HashMap::new();
+        for statement in statements {
+            let mut names = HashSet::new();
+            collect_referenced_binding_names_from_statement(statement, &mut names);
+            for name in names {
+                *counts.entry(name).or_insert(0) += 1;
+            }
+        }
+        counts
+    }
+
+    fn statement_static_metadata_cleanup_candidates(
+        statement: &Statement,
+        remaining_references: &mut HashMap<String, usize>,
+    ) -> Vec<String> {
+        let mut current_references = HashSet::new();
+        collect_referenced_binding_names_from_statement(statement, &mut current_references);
+        for name in &current_references {
+            if let Some(count) = remaining_references.get_mut(name) {
+                *count = count.saturating_sub(1);
+                if *count == 0 {
+                    remaining_references.remove(name);
+                }
+            }
+        }
+
+        let mut candidates = current_references;
+        collect_assigned_binding_names_from_statement(statement, &mut candidates);
+        if let Some(name) = statement.declared_binding_name() {
+            candidates.insert(name.to_string());
+        }
+
+        candidates
+            .into_iter()
+            .filter(|name| remaining_references.get(name).copied().unwrap_or(0) == 0)
+            .collect()
+    }
+
+    fn clear_finished_local_static_metadata(&mut self, name: &str) {
+        self.state.clear_local_static_binding_metadata(name);
+        self.state.clear_member_bindings_for_name(name, true);
+        if self.runtime_object_property_shadow_owner_has_bindings(name) {
+            self.clear_runtime_object_property_shadow_static_metadata_prefix(name);
+        }
+    }
+
+    fn cleanup_emitted_statement_static_metadata_after_last_use(
+        &mut self,
+        statement: &Statement,
+        remaining_references: &mut HashMap<String, usize>,
+    ) {
+        let candidates =
+            Self::statement_static_metadata_cleanup_candidates(statement, remaining_references);
+        for name in candidates {
+            self.clear_finished_local_static_metadata(&name);
+        }
+    }
+
     fn expression_timing_label(expression: &Expression) -> String {
         match expression {
             Expression::Call { callee, .. } => {
@@ -98,8 +157,26 @@ impl<'a> FunctionCompiler<'a> {
         &mut self,
         statements: &[Statement],
     ) -> DirectResult<()> {
+        let outermost_statement_list = self.state.emission.statement_list_emission_depth == 0;
+        self.state.emission.statement_list_emission_depth += 1;
+        let result = self.emit_statements_inner(statements, outermost_statement_list);
+        self.state.emission.statement_list_emission_depth = self
+            .state
+            .emission
+            .statement_list_emission_depth
+            .saturating_sub(1);
+        result
+    }
+
+    fn emit_statements_inner(
+        &mut self,
+        statements: &[Statement],
+        cleanup_after_last_use: bool,
+    ) -> DirectResult<()> {
         let trace = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_COMPILE");
         let trace_timing = crate::ayy_env_flag!("AYY_TRACE_FUNCTION_STATEMENT_TIMING");
+        let mut remaining_references =
+            cleanup_after_last_use.then(|| Self::statement_list_reference_counts(statements));
         let mut index = 0;
         while let Some(statement) = statements.get(index) {
             let timing_start = trace_timing.then(std::time::Instant::now);
@@ -113,9 +190,9 @@ impl<'a> FunctionCompiler<'a> {
                 eprintln!("function_compile=statement:{statement:?}");
             }
             let next_statement = statements.get(index + 1);
+            let mut consumed_statements = 1;
             if self.try_emit_static_lowered_await_resume_statement(statement, next_statement)? {
-                index += 2;
-                continue;
+                consumed_statements = 2;
             } else if !self.try_emit_destructuring_default_iterator_close_statement(
                 statement,
                 next_statement,
@@ -132,10 +209,18 @@ impl<'a> FunctionCompiler<'a> {
                     Self::statement_timing_label(statement)
                 );
             }
+            if let Some(remaining_references) = remaining_references.as_mut() {
+                for consumed_statement in &statements[index..index + consumed_statements] {
+                    self.cleanup_emitted_statement_static_metadata_after_last_use(
+                        consumed_statement,
+                        remaining_references,
+                    );
+                }
+            }
             if Self::statement_unconditionally_transfers_control(statement) {
                 break;
             }
-            index += 1;
+            index += consumed_statements;
         }
         Ok(())
     }

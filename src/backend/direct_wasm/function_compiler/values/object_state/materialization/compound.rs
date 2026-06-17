@@ -190,6 +190,76 @@ impl<'a> FunctionCompiler<'a> {
         self.resolve_effectful_getter_constant_return_value(&getter_binding)
     }
 
+    pub(in crate::backend::direct_wasm) fn snapshot_effectful_member_read_for_static_store(
+        &self,
+        expression: &Expression,
+    ) -> Option<Expression> {
+        if let Some(value) = self.snapshot_effectful_getter_member_read_for_static_store(expression)
+        {
+            return Some(value);
+        }
+
+        let Expression::Member { object, property } = expression else {
+            return None;
+        };
+        if inline_summary_side_effect_free_expression(object)
+            && inline_summary_side_effect_free_expression(property)
+        {
+            return None;
+        }
+
+        let materialized_object = if inline_summary_side_effect_free_expression(object) {
+            let materialized = self.materialize_static_expression(object);
+            if static_expression_matches(&materialized, object) {
+                object.as_ref().clone()
+            } else {
+                materialized
+            }
+        } else {
+            self.resolve_materialized_effectful_member_base_object(object)?
+        };
+        let resolved_property = self.resolve_property_key_expression_with_coercion(property)?;
+        if resolved_property.coercion.is_some() {
+            return None;
+        }
+        let materialized_property =
+            self.canonical_object_property_expression(&resolved_property.key);
+        static_property_name_from_expression(&materialized_property)?;
+
+        if !inline_summary_side_effect_free_expression(property) {
+            let mut effect_names = HashSet::new();
+            let mut visited = HashSet::new();
+            self.collect_expression_call_effect_nonlocal_bindings(
+                property,
+                self.current_function_name(),
+                &mut effect_names,
+                &mut visited,
+            );
+            if let Expression::Identifier(owner_name) = &materialized_object
+                && effect_names.contains(owner_name)
+            {
+                return None;
+            }
+            if let Some(shadow_name) = self
+                .runtime_object_property_shadow_binding_name_for_expression(
+                    &materialized_object,
+                    &materialized_property,
+                )
+                && effect_names.contains(&shadow_name)
+            {
+                return None;
+            }
+        }
+
+        let object_binding = self.resolve_object_binding_from_expression(&materialized_object)?;
+        let value = self
+            .resolve_object_binding_property_value(&object_binding, &materialized_property)
+            .or_else(|| {
+                self.resolve_object_binding_property_value(&object_binding, &resolved_property.key)
+            })?;
+        Some(self.materialize_static_expression(&value))
+    }
+
     /// Same as [`Self::snapshot_effectful_expression_for_static_store`], but
     /// also snapshots pure right-hand sides that read the assignment target
     /// itself (the desugared form of `x op= y` is `x = x op y`); storing the

@@ -9,11 +9,18 @@ impl<'a> FunctionCompiler<'a> {
                 (property_name.starts_with("__ayy$private$")
                     || is_private_brand_marker_property_name(property_name))
                     && matches!(
-                        value,
-                        Expression::Identifier(identifier)
-                            if identifier.starts_with("__ayy_closure_slot_")
+                            value,
+                            Expression::Identifier(identifier)
+                                if identifier.starts_with("__ayy_closure_slot_")
                     )
             })
+    }
+
+    fn object_binding_is_plain_string_data(object_binding: &ObjectValueBinding) -> bool {
+        object_binding.symbol_properties.is_empty()
+            && object_binding.property_descriptors.is_empty()
+            && object_binding.non_enumerable_string_properties.is_empty()
+            && !object_binding.runtime_symbol_properties
     }
 
     pub(in crate::backend::direct_wasm) fn object_binding_has_module_namespace_marker(
@@ -201,6 +208,24 @@ impl<'a> FunctionCompiler<'a> {
         if Self::expression_references_internal_assignment_temp(expression) {
             return local_object_binding;
         }
+        let hidden_capture_name = self.resolve_user_function_capture_hidden_name(name);
+        let runtime_shadow_owner_name =
+            self.runtime_object_property_shadow_owner_name_for_identifier(name);
+        let global_object_binding = self.global_object_binding(name).cloned();
+        if hidden_capture_name.is_none() && runtime_shadow_owner_name.is_none() {
+            if let Some(binding) = local_object_binding
+                .as_ref()
+                .filter(|binding| Self::object_binding_is_plain_string_data(binding))
+            {
+                return Some(binding.clone());
+            }
+            if let Some(binding) = global_object_binding
+                .as_ref()
+                .filter(|binding| Self::object_binding_is_plain_string_data(binding))
+            {
+                return Some(binding.clone());
+            }
+        }
         let local_value_object_binding = self
             .state
             .speculation
@@ -208,13 +233,10 @@ impl<'a> FunctionCompiler<'a> {
             .local_value_binding(&resolved_name)
             .filter(|value| !static_expression_matches(value, expression))
             .and_then(|value| self.resolve_object_binding_from_expression(value));
-        let hidden_object_binding = self
-            .resolve_user_function_capture_hidden_name(name)
+        let hidden_object_binding = hidden_capture_name
             .and_then(|hidden_name| self.global_object_binding(&hidden_name).cloned());
-        let runtime_shadow_object_binding = self
-            .runtime_object_property_shadow_owner_name_for_identifier(name)
+        let runtime_shadow_object_binding = runtime_shadow_owner_name
             .and_then(|owner_name| self.resolve_runtime_shadow_object_binding(&owner_name));
-        let global_object_binding = self.global_object_binding(name).cloned();
         let global_value_object_binding = self
             .global_value_binding(name)
             .filter(|value| !static_expression_matches(value, expression))

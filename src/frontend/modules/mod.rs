@@ -47,15 +47,36 @@ use self::{
 };
 
 pub fn bundle_module_entry(path: &Path) -> Result<Program> {
+    let (module, source_text) = parse_module_file(path)?;
+    if module_can_use_standalone_fast_path(&module, &source_text) {
+        return lower_standalone_module(module, source_text);
+    }
     ModuleLinker::default().bundle_entry(path)
 }
 
 pub fn bundle_module_entry_unmodified(path: &Path) -> Result<Program> {
+    let (module, source_text) = parse_module_file_unmodified(path)?;
+    if module_can_use_standalone_fast_path(&module, &source_text) {
+        return lower_standalone_module(module, source_text);
+    }
     ModuleLinker {
         unmodified_source: true,
         ..Default::default()
     }
     .bundle_entry(path)
+}
+
+fn module_can_use_standalone_fast_path(module: &Module, source_text: &str) -> bool {
+    module
+        .body
+        .iter()
+        .all(|item| matches!(item, ModuleItem::Stmt(_)))
+        && collect_literal_dynamic_import_specifiers(module).is_empty()
+        && collect_literal_dynamic_import_specifiers_in_source_comments(source_text).is_empty()
+}
+
+fn lower_standalone_module(module: Module, source_text: String) -> Result<Program> {
+    Lowerer::with_source_text(source_text).lower_program(&swc_ecma_ast::Program::Module(module))
 }
 
 pub fn bundle_script_entry(path: &Path) -> Result<Program> {

@@ -1,0 +1,12 @@
+subclause: "13.2.5"
+title: Object Initializer
+url: https://262.ecma-international.org/16.0/#sec-object-initializer
+behaviors:
+  - object-literal-accepts-property-forms
+
+behavior_descriptions:
+  object-literal-accepts-property-forms: |
+    ObjectLiteral accepts empty object literals, property definition lists,
+    trailing commas, shorthand properties, literal property names, computed
+    property names, methods, accessors, and spread properties in the syntactic
+    positions allowed by the grammar.

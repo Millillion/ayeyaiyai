@@ -47,13 +47,19 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
 
-        if self.global_has_binding(&property_name)
+        let property_is_lexical_global = self
+            .backend
+            .lexical_global_binding(&property_name)
+            .is_some();
+        if !property_is_lexical_global
+            && self.global_has_binding(&property_name)
             && let Some(global_index) = self.resolve_global_binding_index(&property_name)
         {
             self.emit_declared_global_binding_read(&property_name, global_index)?;
             return Ok(true);
         }
-        if self.global_has_binding(&property_name)
+        if !property_is_lexical_global
+            && self.global_has_binding(&property_name)
             && let Some(value) = self.global_value_binding(&property_name).cloned()
         {
             self.emit_numeric_expression(&value)?;

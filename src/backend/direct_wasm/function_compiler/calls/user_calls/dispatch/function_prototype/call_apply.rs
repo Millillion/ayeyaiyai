@@ -1,6 +1,93 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn user_function_is_simple_return_this_call_target(
+        &self,
+        user_function: &UserFunction,
+    ) -> bool {
+        if user_function.lexical_this
+            || user_function.is_async()
+            || user_function.is_generator()
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+        {
+            return false;
+        }
+        self.resolve_registered_function_declaration(&user_function.name)
+            .is_some_and(|function| {
+                matches!(
+                    function.body.as_slice(),
+                    [Statement::Return(Expression::This)]
+                )
+            })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn emit_simple_return_this_function_prototype_call_or_apply(
+        &mut self,
+        user_function: &UserFunction,
+        property_name: &str,
+        raw_this_expression: &Expression,
+        call_arguments: &[CallArgument],
+        apply_expression: Option<&Expression>,
+        expanded_arguments: &[Expression],
+        source_expression: &Expression,
+    ) -> DirectResult<bool> {
+        if !self.user_function_is_simple_return_this_call_target(user_function)
+            || self.should_box_sloppy_function_this(user_function, raw_this_expression)
+        {
+            return Ok(false);
+        }
+
+        let this_hidden_name = self.allocate_named_hidden_local(
+            "call_apply_return_this",
+            self.infer_value_kind(raw_this_expression)
+                .unwrap_or(StaticValueKind::Unknown),
+        );
+        let this_hidden_local = self
+            .state
+            .runtime
+            .locals
+            .get(&this_hidden_name)
+            .copied()
+            .expect("fresh call/apply return-this hidden local must exist");
+        self.emit_numeric_expression(raw_this_expression)?;
+        self.push_local_set(this_hidden_local);
+
+        if property_name == "call" {
+            for argument in call_arguments {
+                self.emit_numeric_expression(argument.expression())?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+        } else {
+            if let Some(apply_expression) = apply_expression {
+                self.emit_numeric_expression(apply_expression)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+            for extra_argument in expanded_arguments.iter().skip(2) {
+                self.emit_numeric_expression(extra_argument)?;
+                self.state.emission.output.instructions.push(0x1a);
+            }
+        }
+
+        self.state
+            .speculation
+            .static_semantics
+            .last_bound_user_function_call = Some(BoundUserFunctionCallSnapshot {
+            function_name: user_function.name.clone(),
+            source_expression: None,
+            result_expression: Some(Expression::Identifier(this_hidden_name.clone())),
+            prototype_source_expression: None,
+            updated_bindings: HashMap::new(),
+        });
+        crate::backend::direct_wasm::memo::bump_static_state_generation();
+        self.note_last_bound_user_function_source_expression(source_expression);
+        self.push_local_get(this_hidden_local);
+        Ok(true)
+    }
+
     fn user_function_runtime_value_from_expression(&self, expression: &Expression) -> Option<i32> {
         let LocalFunctionBinding::User(function_name) =
             self.resolve_function_binding_from_expression(expression)?
@@ -326,6 +413,13 @@ impl<'a> FunctionCompiler<'a> {
             return Ok(false);
         };
         let capture_slots = self.resolve_function_expression_capture_slots(object);
+        let source_expression = Expression::Call {
+            callee: Box::new(Expression::Member {
+                object: Box::new(object.clone()),
+                property: Box::new(property.clone()),
+            }),
+            arguments: arguments.to_vec(),
+        };
 
         let expanded_arguments = self.expand_call_arguments(arguments);
         let raw_this_expression = expanded_arguments
@@ -354,52 +448,107 @@ impl<'a> FunctionCompiler<'a> {
             };
             (call_arguments, Some(apply_expression))
         };
-        let materialized_this_expression = self.materialize_static_expression(&raw_this_expression);
-        let materialized_call_arguments = call_arguments
-            .iter()
-            .map(|argument| match argument {
-                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                    self.materialize_static_expression(expression)
-                }
-            })
-            .collect::<Vec<_>>();
-        let call_argument_expressions = call_arguments
-            .iter()
-            .map(|argument| match argument {
-                CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
-                    expression.clone()
-                }
-            })
-            .collect::<Vec<_>>();
 
         self.emit_numeric_expression(object)?;
         self.state.emission.output.instructions.push(0x1a);
 
+        let trace_user_calls = crate::ayy_env_flag!("AYY_TRACE_USER_CALLS");
+        if self.emit_simple_return_this_function_prototype_call_or_apply(
+            &user_function,
+            property_name,
+            &raw_this_expression,
+            &call_arguments,
+            apply_expression.as_ref(),
+            &expanded_arguments,
+            &source_expression,
+        )? {
+            return Ok(true);
+        }
+
+        if property_name == "call"
+            && capture_slots.is_none()
+            && !self.should_box_sloppy_function_this(&user_function, &raw_this_expression)
+            && let Some((static_result, writes)) =
+                self.simple_this_member_write_return_function_identity(&user_function)
+        {
+            if trace_user_calls {
+                eprintln!(
+                    "function_prototype_call:try_simple_this_identity target={} this={raw_this_expression:?}",
+                    user_function.name
+                );
+            }
+            let direct_call_arguments = call_arguments
+                .iter()
+                .map(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        expression.clone()
+                    }
+                })
+                .collect::<Vec<_>>();
+            if self.emit_simple_this_member_write_return_function_identity_call(
+                &user_function,
+                &direct_call_arguments,
+                JS_UNDEFINED_TAG,
+                &raw_this_expression,
+                &static_result,
+                &writes,
+            )? {
+                if trace_user_calls {
+                    eprintln!(
+                        "function_prototype_call:simple_this_identity target={}",
+                        user_function.name
+                    );
+                }
+                self.note_last_bound_user_function_source_expression(&source_expression);
+                return Ok(true);
+            }
+        }
+
         if capture_slots.is_none()
-            && (user_function.strict || user_function.lexical_this)
-            && self.can_inline_user_function_call_with_explicit_call_frame(
+            && !self.should_box_sloppy_function_this(&user_function, &raw_this_expression)
+        {
+            let materialized_this_expression =
+                self.materialize_static_expression(&raw_this_expression);
+            let materialized_call_arguments = call_arguments
+                .iter()
+                .map(|argument| match argument {
+                    CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                        self.materialize_static_expression(expression)
+                    }
+                })
+                .collect::<Vec<_>>();
+            if self.can_inline_user_function_call_with_explicit_call_frame(
                 &user_function,
                 &materialized_call_arguments,
                 &materialized_this_expression,
-            )
-        {
-            if let Some(apply_expression) = &apply_expression {
-                self.emit_numeric_expression(apply_expression)?;
-                self.state.emission.output.instructions.push(0x1a);
-                for extra_argument in expanded_arguments.iter().skip(2) {
-                    self.emit_numeric_expression(extra_argument)?;
+            ) {
+                if let Some(apply_expression) = &apply_expression {
+                    self.emit_numeric_expression(apply_expression)?;
                     self.state.emission.output.instructions.push(0x1a);
+                    for extra_argument in expanded_arguments.iter().skip(2) {
+                        self.emit_numeric_expression(extra_argument)?;
+                        self.state.emission.output.instructions.push(0x1a);
+                    }
                 }
-            }
-            let result_local = self.allocate_temp_local();
-            if self.emit_inline_user_function_summary_with_explicit_call_frame(
-                &user_function,
-                &call_argument_expressions,
-                &materialized_this_expression,
-                result_local,
-            )? {
-                self.push_local_get(result_local);
-                return Ok(true);
+                let result_local = self.allocate_temp_local();
+                let call_argument_expressions = call_arguments
+                    .iter()
+                    .map(|argument| match argument {
+                        CallArgument::Expression(expression) | CallArgument::Spread(expression) => {
+                            expression.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if self.emit_inline_user_function_summary_with_explicit_call_frame(
+                    &user_function,
+                    &call_argument_expressions,
+                    &materialized_this_expression,
+                    result_local,
+                )? {
+                    self.push_local_get(result_local);
+                    self.note_last_bound_user_function_source_expression(&source_expression);
+                    return Ok(true);
+                }
             }
         }
 
@@ -439,6 +588,7 @@ impl<'a> FunctionCompiler<'a> {
             &this_expression,
             capture_slots.as_ref(),
         )?;
+        self.note_last_bound_user_function_source_expression(&source_expression);
         Ok(true)
     }
 }

@@ -201,20 +201,23 @@ impl DirectWasmCompiler {
             let candidate =
                 self.resolve_function_binding_from_expression_with_aliases(argument, aliases);
             register_candidate(param_name, candidate.clone());
-            let materialized_argument = self
-                .materialize_global_expression_with_state(
-                    argument,
-                    &HashMap::new(),
-                    value_bindings,
-                    object_state,
-                )
-                .unwrap_or_else(|| self.materialize_global_expression(argument));
+            let materialized_without_state = self.materialize_global_expression(argument);
+            let materialized_argument =
+                if Self::prepared_parameter_argument_is_stable(&materialized_without_state) {
+                    materialized_without_state
+                } else {
+                    self.materialize_global_expression_with_state(
+                        argument,
+                        &HashMap::new(),
+                        value_bindings,
+                        object_state,
+                    )
+                    .unwrap_or(materialized_without_state)
+                };
             register_array_candidate(
                 param_name,
                 self.infer_global_array_binding(&materialized_argument),
             );
-            let mut value_state = value_bindings.clone();
-            let mut object_state = object_state.clone();
             let object_candidate = if matches!(
                 argument,
                 Expression::Member { property, .. }
@@ -232,6 +235,8 @@ impl DirectWasmCompiler {
             ) {
                 None
             } else {
+                let mut value_state = value_bindings.clone();
+                let mut object_state = object_state.clone();
                 self.infer_global_object_binding_with_state(
                     argument,
                     &mut value_state,

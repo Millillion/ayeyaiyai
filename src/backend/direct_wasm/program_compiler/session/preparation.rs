@@ -5,23 +5,46 @@ impl<'a> ProgramCompilationSession<'a> {
         &mut self,
         program: &Program,
     ) -> DirectResult<PreparedBackendProgram> {
+        let trace_timing = crate::ayy_env_flag!("AYY_TRACE_COMPILE_TIMING");
+        let timing_start = trace_timing.then(std::time::Instant::now);
+        let mut timing_last = timing_start;
+        let mut trace_step = |step: &str| {
+            if let Some(previous) = timing_last {
+                let now = std::time::Instant::now();
+                let total_ms = timing_start
+                    .map(|start| now.duration_since(start).as_millis())
+                    .unwrap_or(0);
+                eprintln!(
+                    "prepare_program_timing step={step} elapsed_ms={} total_ms={total_ms}",
+                    now.duration_since(previous).as_millis()
+                );
+                timing_last = Some(now);
+            }
+        };
         self.run_function_discovery_phase(program)?;
+        trace_step("function_discovery");
         self.run_global_binding_phase(program);
+        trace_step("global_binding");
         // Runtime reservation re-registers class member bindings (it can
         // resolve class-expression aliases such as `var C = class { ... }`
         // once constructor metadata exists), so parameter analysis runs after
         // it to see prototype method bindings for those classes.
         self.run_runtime_reservation_phase(program)?;
+        trace_step("runtime_reservation");
         self.run_parameter_analysis_phase(program);
+        trace_step("parameter_analysis");
         let global_binding_environment = self.compiler.snapshot_global_binding_environment();
         let global_static_semantics = self.compiler.snapshot_global_static_semantics();
+        trace_step("snapshots");
 
         let start = self.prepare_start_function(program, &global_binding_environment)?;
+        trace_step("prepare_start");
         let (user_functions, analysis) = self.prepare_user_function_compilations(
             program,
             &global_binding_environment,
             global_static_semantics,
         )?;
+        trace_step("prepare_user_functions");
 
         Ok(PreparedBackendProgram {
             start,
@@ -60,6 +83,7 @@ impl<'a> ProgramCompilationSession<'a> {
     )> {
         let mut user_functions = Vec::new();
         let mut ordered_user_function_names = Vec::new();
+        let mut assigned_nonlocal_bindings = HashMap::new();
         let mut assigned_nonlocal_binding_results = HashMap::new();
         let mut user_function_metadata = HashMap::new();
         let registered_declarations = self
@@ -84,6 +108,19 @@ impl<'a> ProgramCompilationSession<'a> {
                 assigned_nonlocal_binding_results
                     .insert(prepared_function.metadata.name.clone(), prepared_results);
             }
+            if !prepared_function
+                .analysis
+                .assigned_nonlocal_bindings
+                .is_empty()
+            {
+                assigned_nonlocal_bindings.insert(
+                    prepared_function.metadata.name.clone(),
+                    prepared_function
+                        .analysis
+                        .assigned_nonlocal_bindings
+                        .clone(),
+                );
+            }
             user_functions.push(prepared_function);
         }
         let eval_local_function_bindings = self.compiler.prepared_eval_local_function_bindings();
@@ -92,6 +129,7 @@ impl<'a> ProgramCompilationSession<'a> {
         Ok((
             user_functions,
             PreparedProgramAnalysis::new(
+                assigned_nonlocal_bindings,
                 assigned_nonlocal_binding_results,
                 user_function_metadata,
                 ordered_user_function_names,

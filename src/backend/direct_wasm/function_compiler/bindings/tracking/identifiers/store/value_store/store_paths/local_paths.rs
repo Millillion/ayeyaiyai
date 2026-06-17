@@ -137,6 +137,40 @@ impl<'a> FunctionCompiler<'a> {
         }
     }
 
+    fn sync_local_store_array_binding(
+        &mut self,
+        resolved_name: &str,
+        state: &PreparedIdentifierStoreState,
+    ) {
+        let Some(array_binding) = state.array_binding.as_ref() else {
+            return;
+        };
+
+        let length_local = self.ensure_runtime_array_length_local(resolved_name);
+        self.push_i32_const(array_binding.values.len() as i32);
+        self.push_local_set(length_local);
+        self.ensure_runtime_array_slots_for_binding(resolved_name, array_binding);
+        if state.array_binding_is_runtime_initializer_only() {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_array_binding(resolved_name);
+        } else {
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_array_binding(resolved_name, array_binding.clone());
+        }
+        self.state
+            .speculation
+            .static_semantics
+            .clear_tracked_array_specialized_function_values(resolved_name);
+        self.state
+            .speculation
+            .static_semantics
+            .set_local_kind(resolved_name, StaticValueKind::Object);
+    }
+
     fn update_internal_assignment_temp_static_metadata(
         &mut self,
         resolved_name: &str,
@@ -323,6 +357,13 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local_init:kind:done");
             }
+        }
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:array_binding:start");
+        }
+        self.sync_local_store_array_binding(resolved_name, state);
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local_init:array_binding:done");
         }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:local_init:emit_store:start");
@@ -524,6 +565,13 @@ impl<'a> FunctionCompiler<'a> {
             if trace_identifier_store {
                 eprintln!("identifier_store:{name}:local:kind:done");
             }
+        }
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:array_binding:start");
+        }
+        self.sync_local_store_array_binding(resolved_name, state);
+        if trace_identifier_store {
+            eprintln!("identifier_store:{name}:local:array_binding:done");
         }
         if trace_identifier_store {
             eprintln!("identifier_store:{name}:local:emit_store:start");

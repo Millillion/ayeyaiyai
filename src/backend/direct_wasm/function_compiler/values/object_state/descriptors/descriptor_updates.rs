@@ -1,5 +1,7 @@
 use super::*;
 
+const LOCAL_STATIC_VALUE_NODE_LIMIT: usize = 32;
+
 fn expression_is_promise_resolve_undefined_call(expression: &Expression) -> bool {
     let Expression::Call { callee, arguments } = expression else {
         return false;
@@ -50,6 +52,93 @@ fn expression_is_static_promise_with_resolvers_record(expression: &Expression) -
         }
     }
     has_promise && has_resolve && has_reject
+}
+
+fn static_expression_exceeds_node_limit(expression: &Expression, limit: usize) -> bool {
+    fn visit(expression: &Expression, remaining: &mut usize) -> bool {
+        if *remaining == 0 {
+            return true;
+        }
+        *remaining -= 1;
+        match expression {
+            Expression::Array(elements) => elements.iter().any(|element| match element {
+                ArrayElement::Expression(value) | ArrayElement::Spread(value) => {
+                    visit(value, remaining)
+                }
+            }),
+            Expression::Object(entries) => entries.iter().any(|entry| match entry {
+                ObjectEntry::Data { key, value } => {
+                    visit(key, remaining) || visit(value, remaining)
+                }
+                ObjectEntry::Getter { key, getter } => {
+                    visit(key, remaining) || visit(getter, remaining)
+                }
+                ObjectEntry::Setter { key, setter } => {
+                    visit(key, remaining) || visit(setter, remaining)
+                }
+                ObjectEntry::Spread(value) => visit(value, remaining),
+            }),
+            Expression::Member { object, property } => {
+                visit(object, remaining) || visit(property, remaining)
+            }
+            Expression::SuperMember { property } => visit(property, remaining),
+            Expression::Assign { value, .. }
+            | Expression::AssignSuperMember { value, .. }
+            | Expression::Await(value)
+            | Expression::EnumerateKeys(value)
+            | Expression::GetIterator(value)
+            | Expression::IteratorClose(value)
+            | Expression::Unary {
+                expression: value, ..
+            } => visit(value, remaining),
+            Expression::AssignMember {
+                object,
+                property,
+                value,
+            } => visit(object, remaining) || visit(property, remaining) || visit(value, remaining),
+            Expression::Binary { left, right, .. } => {
+                visit(left, remaining) || visit(right, remaining)
+            }
+            Expression::Conditional {
+                condition,
+                then_expression,
+                else_expression,
+            } => {
+                visit(condition, remaining)
+                    || visit(then_expression, remaining)
+                    || visit(else_expression, remaining)
+            }
+            Expression::Sequence(expressions) => expressions
+                .iter()
+                .any(|expression| visit(expression, remaining)),
+            Expression::Call { callee, arguments }
+            | Expression::SuperCall { callee, arguments }
+            | Expression::New { callee, arguments } => {
+                visit(callee, remaining)
+                    || arguments
+                        .iter()
+                        .any(|argument| visit(argument.expression(), remaining))
+            }
+            Expression::Number(_)
+            | Expression::BigInt(_)
+            | Expression::String(_)
+            | Expression::Bool(_)
+            | Expression::Null
+            | Expression::Undefined
+            | Expression::NewTarget
+            | Expression::Identifier(_)
+            | Expression::This
+            | Expression::Sent
+            | Expression::Update { .. } => false,
+        }
+    }
+
+    let mut remaining = limit;
+    visit(expression, &mut remaining)
+}
+
+fn large_function_should_preserve_exact_local_value(value: &Expression) -> bool {
+    matches!(value, Expression::Identifier(_) | Expression::This)
 }
 
 impl<'a> FunctionCompiler<'a> {
@@ -187,6 +276,22 @@ impl<'a> FunctionCompiler<'a> {
                 .clear_local_value_binding(name);
             return;
         }
+        if self.current_function_exceeds_static_analysis_budget()
+            && !large_function_should_preserve_exact_local_value(value)
+        {
+            let kind = self
+                .infer_value_kind(value)
+                .unwrap_or(StaticValueKind::Unknown);
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_value_binding(name);
+            self.state
+                .speculation
+                .static_semantics
+                .set_local_kind(name, kind);
+            return;
+        }
         let snapshot_value = self
             .state
             .speculation
@@ -195,6 +300,13 @@ impl<'a> FunctionCompiler<'a> {
             .or_else(|| self.global_value_binding(name))
             .map(|snapshot| substitute_self_referential_binding_snapshot(value, name, snapshot))
             .unwrap_or_else(|| value.clone());
+        if static_expression_exceeds_node_limit(&snapshot_value, LOCAL_STATIC_VALUE_NODE_LIMIT) {
+            self.state
+                .speculation
+                .static_semantics
+                .clear_local_value_binding(name);
+            return;
+        }
         let mut referenced_names = HashSet::new();
         collect_referenced_binding_names_from_expression(&snapshot_value, &mut referenced_names);
         if referenced_names.contains(name) {

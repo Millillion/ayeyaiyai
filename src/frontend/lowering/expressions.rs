@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use crate::ir::hir::array_elision_expression;
+
 use super::*;
 
 fn push_wtf8_code_point(output: &mut String, code_point: u32) {
@@ -198,7 +200,7 @@ impl Lowerer {
                                 ArrayElement::Expression(expression)
                             })
                         }
-                        None => Ok(ArrayElement::Expression(Expression::Undefined)),
+                        None => Ok(ArrayElement::Expression(array_elision_expression())),
                     })
                     .collect::<Result<Vec<_>>>()?,
             )),

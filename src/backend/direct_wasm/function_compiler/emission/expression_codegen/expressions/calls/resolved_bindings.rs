@@ -1,6 +1,190 @@
 use super::*;
 
 impl<'a> FunctionCompiler<'a> {
+    pub(in crate::backend::direct_wasm) fn resolve_fast_static_number_expression(
+        &self,
+        expression: &Expression,
+        depth: usize,
+    ) -> Option<f64> {
+        if depth > 12 {
+            return None;
+        }
+        match expression {
+            Expression::Number(value) => Some(*value),
+            Expression::Identifier(name) => {
+                let resolved_name = self
+                    .resolve_current_local_binding(name)
+                    .map(|(resolved_name, _)| resolved_name);
+                let value = resolved_name
+                    .as_deref()
+                    .and_then(|resolved_name| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding(resolved_name)
+                    })
+                    .or_else(|| {
+                        self.state
+                            .speculation
+                            .static_semantics
+                            .local_value_binding(name)
+                    })
+                    .or_else(|| self.global_value_binding(name))?;
+                if static_expression_matches(value, expression) {
+                    return None;
+                }
+                self.resolve_fast_static_number_expression(value, depth + 1)
+            }
+            Expression::Binary { op, left, right } => {
+                let left = self.resolve_fast_static_number_expression(left, depth + 1)?;
+                let right = self.resolve_fast_static_number_expression(right, depth + 1)?;
+                match op {
+                    BinaryOp::Add => Some(left + right),
+                    BinaryOp::Subtract => Some(left - right),
+                    BinaryOp::Multiply => Some(left * right),
+                    BinaryOp::Divide => Some(left / right),
+                    BinaryOp::Modulo => Some(left % right),
+                    BinaryOp::Exponentiate => Some(left.powf(right)),
+                    _ => None,
+                }
+            }
+            Expression::Unary {
+                op: UnaryOp::Negate,
+                expression,
+            } => self
+                .resolve_fast_static_number_expression(expression, depth + 1)
+                .map(|value| -value),
+            Expression::Unary {
+                op: UnaryOp::Plus,
+                expression,
+            } => self.resolve_fast_static_number_expression(expression, depth + 1),
+            Expression::Member { object, property } => {
+                let object_binding = self.resolve_object_binding_from_expression(object)?;
+                let canonical_property = self.canonical_object_property_expression(property);
+                let value = object_binding_lookup_value(&object_binding, &canonical_property)
+                    .or_else(|| object_binding_lookup_value(&object_binding, property))?;
+                self.resolve_fast_static_number_expression(value, depth + 1)
+            }
+            Expression::Call { callee, arguments } => {
+                let return_value =
+                    self.resolve_effectful_call_return_metadata_value(callee, arguments)?;
+                if static_expression_matches(&return_value, expression) {
+                    return None;
+                }
+                self.resolve_fast_static_number_expression(&return_value, depth + 1)
+            }
+            Expression::Sequence(expressions) => {
+                self.resolve_fast_static_number_expression(expressions.last()?, depth + 1)
+            }
+            _ => None,
+        }
+    }
+
+    pub(in crate::backend::direct_wasm) fn resolve_fast_static_user_function_call_number(
+        &self,
+        user_function: &UserFunction,
+        arguments: &[CallArgument],
+        this_binding: &Expression,
+    ) -> Option<f64> {
+        let trace = crate::ayy_env_flag!("AYY_TRACE_FAST_METHOD_NUMBER");
+        if user_function.is_async()
+            || user_function.is_generator()
+            || user_function.has_parameter_defaults()
+            || user_function.has_lowered_pattern_parameters()
+            || self.user_function_mentions_private_member_access(user_function)
+            || self.user_function_mentions_direct_eval(user_function)
+            || arguments
+                .iter()
+                .any(|argument| matches!(argument, CallArgument::Spread(_)))
+        {
+            if trace {
+                eprintln!(
+                    "fast_method_number:reject_shape function={} async={} generator={} defaults={} lowered={} private={} eval={} spread={}",
+                    user_function.name,
+                    user_function.is_async(),
+                    user_function.is_generator(),
+                    user_function.has_parameter_defaults(),
+                    user_function.has_lowered_pattern_parameters(),
+                    self.user_function_mentions_private_member_access(user_function),
+                    self.user_function_mentions_direct_eval(user_function),
+                    arguments
+                        .iter()
+                        .any(|argument| matches!(argument, CallArgument::Spread(_)))
+                );
+            }
+            return None;
+        }
+        let return_value =
+            self.fast_static_user_function_return_expression(user_function, trace)?;
+        let expanded_arguments = self.expand_call_arguments(arguments);
+        let arguments_binding = Expression::Array(
+            expanded_arguments
+                .iter()
+                .cloned()
+                .map(ArrayElement::Expression)
+                .collect(),
+        );
+        let substituted = self.substitute_user_function_call_frame_bindings(
+            &return_value,
+            user_function,
+            arguments,
+            this_binding,
+            &arguments_binding,
+        );
+        let number = self.resolve_fast_static_number_expression(&substituted, 0);
+        if trace {
+            eprintln!(
+                "fast_method_number:result function={} this={:?} return={:?} substituted={:?} number={:?}",
+                user_function.name, this_binding, return_value, substituted, number
+            );
+        }
+        number
+    }
+
+    fn fast_static_user_function_return_expression(
+        &self,
+        user_function: &UserFunction,
+        trace: bool,
+    ) -> Option<Expression> {
+        if let Some(summary) = user_function.inline_summary.as_ref()
+            && summary.effects.is_empty()
+            && let Some(return_value) = summary.return_value.as_ref()
+        {
+            return Some(return_value.clone());
+        }
+
+        let Some(function) = self.resolve_registered_function_declaration(&user_function.name)
+        else {
+            if trace {
+                eprintln!(
+                    "fast_method_number:reject_missing_declaration function={}",
+                    user_function.name
+                );
+            }
+            return None;
+        };
+        let [Statement::Return(return_value)] = function.body.as_slice() else {
+            if trace {
+                eprintln!(
+                    "fast_method_number:reject_body function={} statement_count={}",
+                    user_function.name,
+                    function.body.len()
+                );
+            }
+            return None;
+        };
+        if !inline_summary_side_effect_free_expression(return_value) {
+            if trace {
+                eprintln!(
+                    "fast_method_number:reject_return_effects function={} return={:?}",
+                    user_function.name, return_value
+                );
+            }
+            return None;
+        }
+        Some(return_value.clone())
+    }
+
     fn home_object_expression_for_user_function(
         user_function: &UserFunction,
     ) -> Option<Expression> {
@@ -309,9 +493,6 @@ impl<'a> FunctionCompiler<'a> {
                 let Some(user_function) = self.user_function(&function_name).cloned() else {
                     return Ok(false);
                 };
-                let runtime_fallback =
-                    self.promise_member_call_requires_runtime_fallback(object, property, arguments);
-                self.emit_private_member_call_brand_check(callee, object, property)?;
                 let materialized_this_expression = self.materialize_static_expression(object);
                 let materialized_call_arguments = arguments
                     .iter()
@@ -321,6 +502,49 @@ impl<'a> FunctionCompiler<'a> {
                         }
                     })
                     .collect::<Vec<_>>();
+                if self
+                    .resolve_object_binding_from_expression(object)
+                    .is_some()
+                    && inline_summary_side_effect_free_expression(object)
+                    && inline_summary_side_effect_free_expression(property)
+                    && arguments.iter().all(|argument| {
+                        inline_summary_side_effect_free_expression(argument.expression())
+                    })
+                    && !self.user_function_mentions_private_member_access(&user_function)
+                {
+                    if let Some(number) = self.resolve_fast_static_user_function_call_number(
+                        &user_function,
+                        arguments,
+                        &materialized_this_expression,
+                    ) {
+                        self.emit_numeric_expression(&Expression::Number(number))?;
+                        self.note_last_bound_user_function_source_expression(&Expression::Call {
+                            callee: Box::new(callee.clone()),
+                            arguments: arguments.to_vec(),
+                        });
+                        return Ok(true);
+                    }
+                    let static_function_binding = LocalFunctionBinding::User(function_name.clone());
+                    if let Some(return_value) = self
+                        .resolve_function_binding_static_return_expression_with_call_frame(
+                            &static_function_binding,
+                            &materialized_call_arguments,
+                            &materialized_this_expression,
+                        )
+                        && let Some(number) =
+                            self.resolve_fast_static_number_expression(&return_value, 0)
+                    {
+                        self.emit_numeric_expression(&Expression::Number(number))?;
+                        self.note_last_bound_user_function_source_expression(&Expression::Call {
+                            callee: Box::new(callee.clone()),
+                            arguments: arguments.to_vec(),
+                        });
+                        return Ok(true);
+                    }
+                }
+                let runtime_fallback =
+                    self.promise_member_call_requires_runtime_fallback(object, property, arguments);
+                self.emit_private_member_call_brand_check(callee, object, property)?;
                 if let Some(capture_slots) = self
                     .resolve_member_call_capture_slots_for_user_function(
                         &user_function,
